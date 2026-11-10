@@ -202,10 +202,31 @@ def main():
             keys = val
             print(f"-- keys={keys!r}")
         rime.RimeClearComposition(sid)
-        rime.RimeSimulateKeySequence(sid, keys.encode())
-        pre_commit = commit_text()
-        if pre_commit:
-            print(f"  (auto-committed while typing: {pre_commit!r})")
+        names = {'space': 0x20, 'Return': 0xff0d, 'BackSpace': 0xff08,
+                 'Escape': 0xff1b, 'Shift_L': 0xffe1, 'Tab': 0xff09}
+        toks, i = [], 0
+        while i < len(keys):
+            if keys[i] == '{' and '}' in keys[i:]:
+                j = keys.index('}', i)
+                toks.append(keys[i + 1:j]); i = j + 1
+            else:
+                toks.append(keys[i]); i += 1
+        commits, passed = [], []
+        for t in toks:
+            if t in names:
+                code, mask = names[t], 0
+            else:
+                code, mask = ord(t), (1 if t.isupper() else 0)
+            handled = rime.RimeProcessKey(sid, code, mask)
+            if not handled:
+                passed.append(t)
+            c = commit_text()
+            if c:
+                commits.append(c)
+        if commits:
+            print(f"  committed to app while typing: {commits!r}")
+        if passed:
+            print(f"  keys passed through to the app (not consumed): {passed!r}")
         snapshot("buffer")
         if not a.no_commit:
             rime.RimeSimulateKeySequence(sid, b"{Return}")

@@ -317,3 +317,334 @@ Interpretation of 3c:
 * Test data was written by the tester; no statistically meaningful comparison vs MS 新倉頡.
 * The user dictionary (learning) was deliberately kept out of the runs (`--no-commit`); in daily use
   user-word learning will also change results.
+
+## 6. v2 variant (`cangjie5_fluency_v2.schema.yaml`), added later
+
+v2 = v1 plus the config-only changes from `docs/item4-analysis.md`: `speller/use_space: true` and no
+punctuator space entry; `half_shape` `, . ? ! :` as plain values; no `recognizer: import_preset: default`;
+stock `abc_segmentor` (extra_tags reverse_lookup) instead of the `abc` recognizer pattern. Same dict and
+prism (`cangjie5_fluency`); schema_id `cangjie5_fluency_v2`.
+
+```
+SHARED=$PWD/testenv/shared_nogy bash weasel/docs/build_test.sh v2     # builds v1 + v2 into testenv/v2
+-> exit 0; build/ contains cangjie5_fluency_v2.schema.yaml, one shared table.bin/prism.bin; no errors
+bash weasel/docs/run_keys.sh cangjie5_fluency    v2 weasel/docs/keys_v2.txt   # v1
+bash weasel/docs/run_keys.sh cangjie5_fluency_v2 v2 weasel/docs/keys_v2.txt   # v2
+USERDIR=testenv/v2 SHARED=testenv/shared_nogy bash weasel/docs/run_eval.sh weasel/docs/sentences.txt --quiet --no-commit --schema cangjie5_fluency_v2
+(same for hard.txt, trace.txt, show.txt)
+```
+
+The driver now feeds keys one by one with `RimeProcessKey` (uppercase letters with the Shift mask) and
+reports (a) text committed to the app and (b) keys that were NOT consumed (= the application would
+receive them, e.g. space with an empty buffer).
+
+### 6a. Regression set, v2 vs v1
+
+* sentences.txt: v2 51/51 (model ON) and 51/51 (OFF) = identical to v1.
+* hard.txt: v2 36/40 ON, 37/40 OFF, the same four/three misses as v1 (see 3a).
+* trace.txt (板橋, 我們明天中午去板橋 per-key top candidate), show.txt candidates: byte-identical to v1
+  apart from the schema name.
+* Single-letter code with trailing space (`l oj` -> 中午), `ldhe` -> 被, backtick `` `ban `` -> 辦 版 半 班 板,
+  Return, BackSpace x1/x2, Escape: identical to v1.
+* Differences found are only the intended behaviour changes below. No accuracy regression.
+
+### 6b. Per-case differences v1 -> v2 (`diff` of the two outputs; all other cases identical)
+
+```
+20,21c20
+<   committed to app while typing: ['板橋。']
+<   buffer: (no composition)
+---
+>   buffer: preedit='板橋。' candidates=[]
+23,24c22
+<   committed to app while typing: ['板橋，']
+<   buffer: (no composition)
+---
+>   buffer: preedit='板橋，' candidates=[]
+26,27c24
+<   committed to app while typing: ['板橋！']
+<   buffer: (no composition)
+---
+>   buffer: preedit='板橋！' candidates=[]
+29,30c26
+<   committed to app while typing: ['板橋？']
+<   buffer: (no composition)
+---
+>   buffer: preedit='板橋？' candidates=[]
+32,33c28
+<   committed to app while typing: ['板橋：']
+<   buffer: (no composition)
+---
+>   buffer: preedit='板橋：' candidates=[]
+35c30
+<   buffer: preedit='板橋；' candidates=['；']
+---
+>   buffer: preedit='木竹水 木竹大月·' candidates=['板橋', '板', '皮']
+42d36
+<   keys passed through to the app (not consumed): ['Return']
+45c39
+<   committed to app while typing: ['板橋，', '板橋']
+---
+>   committed to app while typing: ['板橋，板橋']
+48c42
+<   committed to app while typing: [' ']
+---
+>   keys passed through to the app (not consumed): ['space']
+51c45
+<   committed to app while typing: [' ', ' ']
+---
+>   keys passed through to the app (not consumed): ['space', 'space']
+56,57c50
+<   committed to app while typing: ['板橋 ']
+<   buffer: (no composition)
+---
+>   buffer: preedit='板橋' candidates=[]
+66c59
+<   buffer: preedit='板Adhkb' candidates=[]
+---
+>   buffer: preedit='板A木竹 大月' candidates=['才有', '橋', '才']
+70c63
+<   buffer: preedit='板橋Ab' candidates=[]
+---
+>   buffer: preedit='板橋A月' candidates=['爲', '用', '月', '剛', '愛']
+72c65
+<   buffer: preedit='Hello' candidates=[]
+---
+>   buffer: preedit='H水中 中人' candidates=['沖複', '沖']
+82,83c75
+<   committed to app while typing: ['，']
+<   buffer: (no composition)
+---
+>   buffer: preedit='，' candidates=[]
+85,86c77
+<   committed to app while typing: ['。']
+<   buffer: (no composition)
+---
+>   buffer: preedit='。' candidates=[]
+94c85
+<   buffer: preedit='dhedhkb@' candidates=[]
+---
+>   buffer: preedit='板橋@' candidates=[]
+```
+
+(`<` = v1, `>` = v2. The diff has no case labels; the full per-case outputs are below.)
+
+Reading it:
+* Punctuation `. , ! ? :` : v1 commits sentence+punct at once, v2 keeps it in the buffer (needs Enter / confirm).
+  Consequence for v2: a lone `,` or `.` with an empty buffer also stays in the buffer (`，`) instead of reaching
+  the app. This is the biggest day-to-day change and could be seen as a regression for v1 users.
+* `;` : v1 candidate `；`, v2 delimiter shown as `·`.
+* Space, empty buffer: v1 commits `' '`, v2 passes the key through to the app. Same net effect.
+* Space after codes: buffer in both (identical). Double space: v1 commits `板橋 `, v2 only confirms (buffer `板橋`);
+  Return is needed.
+* `dheAdhkb`: v1 `板Adhkb`; v2 `板A` + codes `dhkb`, but the top candidate is `才有` and `橋` is second
+  (the analysis note's "板A橋" is NOT reproduced as top candidate; letter and Chinese continuation do work).
+* `dhedhkbAb`: v1 `板橋Ab`, v2 `板橋A月` (b read as a code).
+* `Hello` with an empty buffer: v1 raw `Hello`, v2 `H` + codes for `ello` (garbage). Both stay in the buffer.
+* `dhedhkb@`: v1 `dhedhkb@` (raw, because the abc pattern no longer matches), v2 `板橋@`.
+* `1`, `(`, `#`, `A` with an empty buffer: identical in v1 and v2: they go into the buffer, not to the app.
+  `dhedhkb1` selects the first candidate (buffer `板橋`, not committed) in both.
+
+### 6c. issue #2 (eight04) five points: reproduced or not
+
+1. Dictionary differs (麵): not reproduced or fixed by the schema; it is the table (`jemwl`/`jemls` in rime-cangjie). Same in v1/v2.
+2. Space may separate characters, not required: works in both (`dhe dhkb` = `dhedhkb`).
+3. Space commits the buffer then types a space: NOT reproduced in v1 or v2 (space goes into the buffer; same as MS per the issue).
+   Double space differs: v1 commits+space, v2 confirms only.
+4. Other half-width symbols commit the buffer: v1 still does (`, . ? ! :` commit); v2 does not (they append).
+5. Uppercase turns later lowercase letters into English: v1 still does (`板橋Ab`); v2 no (`板橋A月`).
+
+### 6d. Full outputs
+
+v1 (`cangjie5_fluency`), model ON:
+
+```
+== schema=cangjie5_fluency grammar=ON
+-- keys='dhedhkb'
+  buffer: preedit='木竹水 木竹大月' candidates=['板橋', '板', '皮']
+-- keys='l oj'
+  buffer: preedit='中 人十' candidates=['中午', '中', '丨']
+-- keys='ldhe'
+  buffer: preedit='中木竹水' candidates=['被']
+-- keys='`ban'
+  buffer: preedit='`ban〔拼音〕' candidates=['辦', '版', '半', '班', '板']
+-- keys='dhedhkb{Return}'
+  committed to app while typing: ['板橋']
+  buffer: (no composition)
+-- keys='dhedhkb{BackSpace}'
+  buffer: preedit='木竹水 木竹大' candidates=['板枖', '板', '皮', '才']
+-- keys='dhedhkb{BackSpace}{BackSpace}'
+  buffer: preedit='木竹水 木竹' candidates=['皮才', '板', '皮']
+-- keys='dhedhkb{Escape}'
+  buffer: (no composition)
+-- keys='dhedhkb.'
+  committed to app while typing: ['板橋。']
+  buffer: (no composition)
+-- keys='dhedhkb,'
+  committed to app while typing: ['板橋，']
+  buffer: (no composition)
+-- keys='dhedhkb!'
+  committed to app while typing: ['板橋！']
+  buffer: (no composition)
+-- keys='dhedhkb?'
+  committed to app while typing: ['板橋？']
+  buffer: (no composition)
+-- keys='dhedhkb:'
+  committed to app while typing: ['板橋：']
+  buffer: (no composition)
+-- keys='dhedhkb;'
+  buffer: preedit='板橋；' candidates=['；']
+-- keys='dhedhkb-'
+  buffer: preedit='板橋-' candidates=[]
+-- keys='dhedhkb='
+  buffer: preedit='板橋=' candidates=[]
+-- keys='dhedhkb.{Return}'
+  committed to app while typing: ['板橋。']
+  keys passed through to the app (not consumed): ['Return']
+  buffer: (no composition)
+-- keys='dhedhkb,dhedhkb{Return}'
+  committed to app while typing: ['板橋，', '板橋']
+  buffer: (no composition)
+-- keys='{space}'
+  committed to app while typing: [' ']
+  buffer: (no composition)
+-- keys='{space}{space}'
+  committed to app while typing: [' ', ' ']
+  buffer: (no composition)
+-- keys='dhedhkb{space}'
+  buffer: preedit='木竹水 木竹大月 ' candidates=['板橋', '板', '皮', '才']
+-- keys='dhedhkb{space}{space}'
+  committed to app while typing: ['板橋 ']
+  buffer: (no composition)
+-- keys='dhedhkb{space}{Return}'
+  committed to app while typing: ['板橋']
+  buffer: (no composition)
+-- keys='dhedhkb{space}dhe'
+  buffer: preedit='木竹水 木竹大月 木竹水' candidates=['板橋板', '板橋', '板', '皮', '才']
+-- keys='dhe dhkb'
+  buffer: preedit='木竹水 木竹大月' candidates=['板橋', '板', '皮', '才']
+-- keys='dheAdhkb'
+  buffer: preedit='板Adhkb' candidates=[]
+-- keys='dhedhkbA'
+  buffer: preedit='板橋A' candidates=[]
+-- keys='dhedhkbAb'
+  buffer: preedit='板橋Ab' candidates=[]
+-- keys='Hello'
+  buffer: preedit='Hello' candidates=[]
+-- keys='A'
+  buffer: preedit='A' candidates=[]
+-- keys='1'
+  buffer: preedit='1' candidates=[]
+-- keys='('
+  buffer: preedit='（' candidates=[]
+-- keys='#'
+  buffer: preedit='#' candidates=[]
+-- keys=','
+  committed to app while typing: ['，']
+  buffer: (no composition)
+-- keys='.'
+  committed to app while typing: ['。']
+  buffer: (no composition)
+-- keys='dhedhkb1'
+  buffer: preedit='板橋' candidates=[]
+-- keys='dhedhkb('
+  buffer: preedit='板橋（' candidates=[]
+-- keys='dhedhkb#'
+  buffer: preedit='板橋#' candidates=[]
+-- keys='dhedhkb@'
+  buffer: preedit='dhedhkb@' candidates=[]
+-- keys='dhedhkb"'
+  buffer: preedit='板橋“' candidates=[]
+```
+
+v2 (`cangjie5_fluency_v2`), model ON:
+
+```
+== schema=cangjie5_fluency_v2 grammar=ON
+-- keys='dhedhkb'
+  buffer: preedit='木竹水 木竹大月' candidates=['板橋', '板', '皮']
+-- keys='l oj'
+  buffer: preedit='中 人十' candidates=['中午', '中', '丨']
+-- keys='ldhe'
+  buffer: preedit='中木竹水' candidates=['被']
+-- keys='`ban'
+  buffer: preedit='`ban〔拼音〕' candidates=['辦', '版', '半', '班', '板']
+-- keys='dhedhkb{Return}'
+  committed to app while typing: ['板橋']
+  buffer: (no composition)
+-- keys='dhedhkb{BackSpace}'
+  buffer: preedit='木竹水 木竹大' candidates=['板枖', '板', '皮', '才']
+-- keys='dhedhkb{BackSpace}{BackSpace}'
+  buffer: preedit='木竹水 木竹' candidates=['皮才', '板', '皮']
+-- keys='dhedhkb{Escape}'
+  buffer: (no composition)
+-- keys='dhedhkb.'
+  buffer: preedit='板橋。' candidates=[]
+-- keys='dhedhkb,'
+  buffer: preedit='板橋，' candidates=[]
+-- keys='dhedhkb!'
+  buffer: preedit='板橋！' candidates=[]
+-- keys='dhedhkb?'
+  buffer: preedit='板橋？' candidates=[]
+-- keys='dhedhkb:'
+  buffer: preedit='板橋：' candidates=[]
+-- keys='dhedhkb;'
+  buffer: preedit='木竹水 木竹大月·' candidates=['板橋', '板', '皮']
+-- keys='dhedhkb-'
+  buffer: preedit='板橋-' candidates=[]
+-- keys='dhedhkb='
+  buffer: preedit='板橋=' candidates=[]
+-- keys='dhedhkb.{Return}'
+  committed to app while typing: ['板橋。']
+  buffer: (no composition)
+-- keys='dhedhkb,dhedhkb{Return}'
+  committed to app while typing: ['板橋，板橋']
+  buffer: (no composition)
+-- keys='{space}'
+  keys passed through to the app (not consumed): ['space']
+  buffer: (no composition)
+-- keys='{space}{space}'
+  keys passed through to the app (not consumed): ['space', 'space']
+  buffer: (no composition)
+-- keys='dhedhkb{space}'
+  buffer: preedit='木竹水 木竹大月 ' candidates=['板橋', '板', '皮', '才']
+-- keys='dhedhkb{space}{space}'
+  buffer: preedit='板橋' candidates=[]
+-- keys='dhedhkb{space}{Return}'
+  committed to app while typing: ['板橋']
+  buffer: (no composition)
+-- keys='dhedhkb{space}dhe'
+  buffer: preedit='木竹水 木竹大月 木竹水' candidates=['板橋板', '板橋', '板', '皮', '才']
+-- keys='dhe dhkb'
+  buffer: preedit='木竹水 木竹大月' candidates=['板橋', '板', '皮', '才']
+-- keys='dheAdhkb'
+  buffer: preedit='板A木竹 大月' candidates=['才有', '橋', '才']
+-- keys='dhedhkbA'
+  buffer: preedit='板橋A' candidates=[]
+-- keys='dhedhkbAb'
+  buffer: preedit='板橋A月' candidates=['爲', '用', '月', '剛', '愛']
+-- keys='Hello'
+  buffer: preedit='H水中 中人' candidates=['沖複', '沖']
+-- keys='A'
+  buffer: preedit='A' candidates=[]
+-- keys='1'
+  buffer: preedit='1' candidates=[]
+-- keys='('
+  buffer: preedit='（' candidates=[]
+-- keys='#'
+  buffer: preedit='#' candidates=[]
+-- keys=','
+  buffer: preedit='，' candidates=[]
+-- keys='.'
+  buffer: preedit='。' candidates=[]
+-- keys='dhedhkb1'
+  buffer: preedit='板橋' candidates=[]
+-- keys='dhedhkb('
+  buffer: preedit='板橋（' candidates=[]
+-- keys='dhedhkb#'
+  buffer: preedit='板橋#' candidates=[]
+-- keys='dhedhkb@'
+  buffer: preedit='板橋@' candidates=[]
+-- keys='dhedhkb"'
+  buffer: preedit='板橋“' candidates=[]
+```
