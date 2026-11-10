@@ -63,8 +63,10 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
   這兩版實際內含的 librime 版本我沒有核對。
 
 我沒有在 Windows 安裝安裝檔去驗證 `rime.dll` 內是否真的含 octagram。**最可靠的驗證方式是部署後看日誌**：
-日誌裡應該有 `octagram.cc:... use grammar: zh-hant-t-essay-bgw`。沒有這行 = 外掛或 .gram 沒載入
-（方案仍可用，但等於沒有語言模型）。
+日誌裡應該有 `octagram.cc:... use grammar: zh-hant-t-essay-bgw`。沒有這行 = 外掛沒載入。
+**但這行在 `.gram` 檔不存在時也會印出**（Linux 實測：後面會接一行 `failed to load grammar database`），
+所以要同時確認「有 `use grammar`」和「**沒有** `failed to load grammar`」才算語言模型真的載入。
+（沒載入時方案仍可用，但等於沒有語言模型。）
 
 ## 4. default.custom.yaml 合併方式
 
@@ -151,7 +153,8 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
    `%TEMP%\rime.weasel\rime.weasel.<電腦名>.<使用者>.log.INFO.<日期>-<時間>.<pid>.log`）；
    舊版（0.15.0 實測）則是直接放在 `%TEMP%\rime.weasel.*`。先看 ERROR / WARNING 檔，再看 INFO。
    PowerShell 一行找語言模型：
-   `Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern 'use grammar' | Select -Last 3`
+   `Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern 'use grammar|failed to load grammar' | Select -Last 5`
+   （有 `use grammar` 且其後**沒有** `failed to load grammar database` 才算載入成功；缺 `.gram` 時兩行都會出現）
    * WARNING 檔有數百行 `Encode failure` 和 `duplicate word definition` 是正常的（essay 內碼表沒有的字詞被略過）。
    * `nonexistent config file '...\grammar.yaml'` 也是正常的（選用檔，見第 2 節）。
 2. 常見原因：

@@ -334,8 +334,9 @@ Say 'Done. Next steps:'
 Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie5_fluency" (shown as the sentence-style Cangjie).'
 Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code).'
 Write-Host '  3. Check the language model loaded (after you typed once with the schema):'
-Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar" | Select -Last 3'
-Write-Host '     No "use grammar" line = the model is not loaded (schema still works).'
+Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar|failed to load grammar" | Select -Last 5'
+Write-Host '     Loaded = a "use grammar" line and NO "failed to load grammar database" line after it.'
+Write-Host '     (The "use grammar" line is also printed when the .gram file is missing; the failure line is what tells them apart.)'
 if ($NeedRelogin) { Warn 'Weasel was just installed or upgraded: sign out and sign in again (or restart) before typing, otherwise apps that were already open can crash on first use.' }
 } } catch {
   Write-Host "[cangjie-fluency] ERROR: $($_.Exception.Message)" -ForegroundColor Red
