@@ -10,6 +10,7 @@
   Options:  -SkipWeaselInstall  do not try to install Weasel (it must already be installed)
             -NoDeploy           copy files only, do not run WeaselDeployer
             -NoModel            do not download the 41 MB language model (sentence correction is weaker)
+            -WithV2             also install the experimental cangjie5_fluency_v2 schema and list it
             -DryRun             print what would be done, change nothing
             -Ref <branch|tag>   which version of the schema files to download (default: main)
             -RimeDir <path>     user folder (default: Weasel's RimeUserDir or %APPDATA%\Rime)
@@ -21,6 +22,7 @@ param(
   [switch]$SkipWeaselInstall,
   [switch]$NoDeploy,
   [switch]$NoModel,
+  [switch]$WithV2,
   [switch]$DryRun,
   [string]$Ref = 'main',
   [string]$RimeDir = '',
@@ -58,6 +60,20 @@ function Backup-IfExists($path) {
   }
 }
 
+function Same-Content($a, $b) {
+  if (-not (Test-Path $b)) { return $false }
+  return ((Get-FileHash $a -Algorithm SHA256).Hash -eq (Get-FileHash $b -Algorithm SHA256).Hash)
+}
+
+# Put the finished temp file in place. Identical content = nothing to do (no backup, no overwrite).
+function Place-File($tmp, $dest) {
+  $leaf = Split-Path $dest -Leaf
+  if (Same-Content $tmp $dest) { Remove-Item $tmp -Force; Say "up to date: $leaf"; return }
+  if (Test-Path $dest) { Backup-IfExists $dest; Remove-Item $dest -Force }
+  Move-Item $tmp $dest
+  Say "installed: $leaf"
+}
+
 function Get-Remote($url, $dest, $minBytes, $exactBytes) {
   if ($DryRun) { Say "DRY: would download $url -> $dest"; return }
   $tmp = "$dest.part"
@@ -66,8 +82,7 @@ function Get-Remote($url, $dest, $minBytes, $exactBytes) {
   $len = (Get-Item $tmp).Length
   if ($exactBytes -gt 0 -and $len -ne $exactBytes) { Remove-Item $tmp -Force; Fail "$dest has $len bytes, expected $exactBytes" }
   if ($len -lt $minBytes) { Remove-Item $tmp -Force; Fail "$dest is only $len bytes, the download looks wrong" }
-  if (Test-Path $dest) { Remove-Item $dest -Force }
-  Move-Item $tmp $dest
+  Place-File $tmp $dest
 }
 
 function Find-Weasel {
@@ -116,15 +131,17 @@ if (-not (Test-Path $RimeDir)) { if ($DryRun) { Say "DRY: would create $RimeDir"
 
 # ---------- 3. schema files (local copy next to this script, else download) ----------
 $here = $PSScriptRoot
-foreach ($f in @('cangjie5_fluency.schema.yaml', 'cangjie5_fluency.dict.yaml')) {
+$schemaFiles = @('cangjie5_fluency.schema.yaml', 'cangjie5_fluency.dict.yaml')
+if ($WithV2) { $schemaFiles += 'cangjie5_fluency_v2.schema.yaml' }
+foreach ($f in $schemaFiles) {
   $dest = Join-Path $RimeDir $f
   $local = $null
   if ($here) {
     foreach ($c in @((Join-Path $here $f), (Join-Path (Join-Path $here 'weasel') $f))) { if (Test-Path $c) { $local = $c; break } }
   }
-  if (Test-Path $dest) { Backup-IfExists $dest }
   if ($local) {
-    if ($DryRun) { Say "DRY: would copy $local -> $dest" } else { Copy-Item $local $dest -Force; Say "copied $f" }
+    if ($DryRun) { Say "DRY: would copy $local -> $dest" }
+    else { $tmp = "$dest.part"; Copy-Item $local $tmp -Force; Place-File $tmp $dest }
   } else {
     Get-Remote "$SchemaRaw/$f" $dest 500 0
   }
@@ -150,23 +167,20 @@ else { Get-Remote $GramUrl $gram 1000000 $GramSize }
 
 # ---------- 5. default.custom.yaml ----------
 $dc = Join-Path $RimeDir 'default.custom.yaml'
-$entry = 'cangjie5_fluency'
-$fresh = @"
-# encoding: utf-8
-# created by cangjie-fluency install.ps1
-patch:
-  schema_list:
-    - schema: cangjie5_fluency
-    - schema: cangjie5
-    - schema: luna_pinyin
-"@
+$ids = @('cangjie5_fluency')
+if ($WithV2) { $ids += 'cangjie5_fluency_v2' }
+$freshLines = @('# encoding: utf-8', '# created by cangjie-fluency install.ps1', 'patch:', '  schema_list:')
+foreach ($id in $ids) { $freshLines += "    - schema: $id" }
+$freshLines += @('    - schema: cangjie5', '    - schema: luna_pinyin')
 if (-not (Test-Path $dc)) {
-  $freshCrlf = ($fresh -replace "`r?`n", "`r`n") + "`r`n"
+  $freshCrlf = ($freshLines -join "`r`n") + "`r`n"
   if ($DryRun) { Say "DRY: would create $dc" } else { Write-Utf8NoBom $dc $freshCrlf; Say 'created default.custom.yaml' }
 } else {
   $txt = [IO.File]::ReadAllText($dc)
-  if ($txt -match 'cangjie5_fluency(?![A-Za-z0-9_])') {   # not fooled by cangjie5_fluency_v2
-    Say 'default.custom.yaml already lists cangjie5_fluency.'
+  # exact id match, so cangjie5_fluency is not confused with cangjie5_fluency_v2
+  $missing = @($ids | Where-Object { $txt -notmatch ([regex]::Escape($_) + '(?![A-Za-z0-9_])') })
+  if ($missing.Count -eq 0) {
+    Say 'default.custom.yaml already lists everything needed.'
   } else {
     $lines = $txt -split "`r?`n"
     $idx = -1
@@ -181,15 +195,24 @@ if (-not (Test-Path $dc)) {
       $new = @()
       for ($i = 0; $i -lt $lines.Count; $i++) {
         $new += $lines[$i]
-        if ($i -eq $idx) { $new += ($indent + '- schema: cangjie5_fluency') }
+        if ($i -eq $idx) { foreach ($id in $missing) { if ($id -ne 'cangjie5_fluency_v2') { $new += ($indent + '- schema: ' + $id) } } }
+      }
+      if ($missing -contains 'cangjie5_fluency_v2') {
+        # the experimental schema goes right after v1 when v1 is listed, so it never becomes the default
+        $at = -1
+        for ($k = 0; $k -lt $new.Count; $k++) { if ($new[$k] -match 'schema:\s*cangjie5_fluency(?![A-Za-z0-9_])') { $at = $k; break } }
+        if ($at -lt 0) { $at = $idx }
+        $head = @($new[0..$at]); $tail = @()
+        if ($at + 1 -lt $new.Count) { $tail = @($new[($at + 1)..($new.Count - 1)]) }
+        $new = $head + @($indent + '- schema: cangjie5_fluency_v2') + $tail
       }
       Backup-IfExists $dc
-      if ($DryRun) { Say "DRY: would add '- schema: cangjie5_fluency' to schema_list in $dc" }
-      else { Write-Utf8NoBom $dc (($new -join "`r`n")); Say 'added cangjie5_fluency to the schema_list in your default.custom.yaml (first position)' }
+      if ($DryRun) { Say "DRY: would add $($missing -join ', ') to schema_list in $dc" }
+      else { Write-Utf8NoBom $dc (($new -join "`r`n")); Say "added $($missing -join ', ') to the schema_list in your default.custom.yaml" }
     } else {
       Warn "Your default.custom.yaml has no schema_list, so I did not edit it. Add this under 'patch:' yourself:"
       Write-Host "  schema_list:"
-      Write-Host "    - schema: cangjie5_fluency"
+      foreach ($id in $ids) { Write-Host "    - schema: $id" }
       Write-Host "    - schema: cangjie5"
       Write-Host "    - schema: luna_pinyin"
     }

@@ -20,7 +20,8 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 或到 [Releases](https://github.com/githubhjs/cangjie-fluency/releases) 下載壓縮包，解壓縮後雙擊 `install.bat`。
 
 腳本會：安裝小狼毫（用 winget，沒裝才裝）→ 下載缺的碼表與語言模型 → 複製方案 → 保守合併 `default.custom.yaml`（先備份）→ 重新部署。
-裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 切到 `cangjie5_fluency`。可用 `-DryRun` 先看它會做什麼。
+裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 切到 `cangjie5_fluency`。可用 `-DryRun` 先看它會做什麼。重複執行是安全的：內容相同的檔案不會重複備份或覆蓋。
+想一起裝實驗性的 v2（排在 v1 後面，不會變成預設）：先下載 `install.ps1` 再執行 `.\install.ps1 -WithV2`。
 
 進階：也可以用東風破（[plum](https://github.com/rime/plum)）`rime-install githubhjs/cangjie-fluency`（Windows 需要 plum 的 bootstrap 包，內含 git、7z）。
 **但只適合從沒自訂過方案清單的人，其他人請用上面的一行安裝：**
