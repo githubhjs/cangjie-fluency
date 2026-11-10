@@ -1,8 +1,8 @@
 # cangjie-fluency
 
-全碼倉頡五代（倉頡）的「整句輸入」Rime 方案，目標是接近微軟新倉頡的手感：連續打完整串碼，緩衝區會自動修正，不必逐字選字。
+全碼倉頡的「整句輸入」Rime 方案：**預設是倉頡三代（Windows XP 新倉頡的碼表），可選倉頡五代**，目標是接近微軟新倉頡的手感：連續打完整串碼，緩衝區會自動修正，不必逐字選字。
 
-Full Cangjie 5 sentence-style input schema for Rime (Weasel on Windows), aiming at the feel of Microsoft 新倉頡.
+Sentence-style full Cangjie input schema for Rime (Weasel on Windows): **3rd generation by default (the table behind Windows XP's 新倉頡), 5th generation optional**, aiming at the feel of Microsoft 新倉頡.
 
 - `weasel/` — 方案檔（`cangjie5_fluency` v1、實驗性 `_v2`）、繁中安裝說明 `README.zh-TW.md`、Linux 測試記錄與測試腳本
 - `docs/item4-analysis.md` — 空白鍵、符號、大寫字母與微軟新倉頡差異的原始碼分析（英文）
