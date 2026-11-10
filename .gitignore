@@ -9,3 +9,4 @@ rimebin2/
 src/
 testenv/
 cangjie3.base.dict.yaml
+!data/zh-hant-t-essay-bgw.gram
