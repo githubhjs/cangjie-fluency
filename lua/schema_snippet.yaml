@@ -1,0 +1,56 @@
+# schema_snippet.yaml -- merge into cangjie5_fluency.schema.yaml (or a .custom.yaml patch)
+# Verified on Linux (librime 1.10.0 + librime-lua git20230917), NOT yet on Weasel.
+# Install: copy cangjie_fluency.lua to <Rime user dir>\lua\cangjie_fluency.lua
+# (Weasel: %APPDATA%\Rime\lua\).  Redeploy.
+
+engine:
+  processors:
+    - ascii_composer
+    # MUST be before `recognizer`: the recognizer would otherwise swallow
+    # uppercase letters first (default.yaml `uppercase` pattern).
+    # MUST be after `ascii_composer` (Caps Lock / Shift toggling keep working).
+    - lua_processor@*cangjie_fluency
+    - recognizer
+    - key_binder
+    - speller
+    - punctuator
+    - selector
+    - navigator
+    - fluency_editor
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - abc_segmentor          # needed for uppercase: literal / symbols: append (see doc)
+    - punct_segmentor
+    - fallback_segmentor
+
+# Lua switches (all optional; defaults shown)
+cangjie_fluency:
+  space: buffer          # buffer | default
+  double_space: default  # default (2nd space -> editor confirm) | ignore
+  uppercase: literal     # commit | literal | default   (literal needs abc_segmentor)
+  symbols: append        # append | default
+  symbol_chars: "!?()[]{}<>/\\|@#$%^&*_+~:\""   # add ,.-= only if paging keys are removed from key_binder
+  empty_direct: true     # empty buffer + digit/uppercase/symbol -> commit at once
+
+# Required companions
+recognizer:
+  # NOT `import_preset: default`: that imports email/uppercase/url patterns.
+  patterns:
+    reverse_lookup: "`[a-z]*'?$"
+    # no `abc` pattern: abc_segmentor does the segmenting
+
+speller:
+  delimiter: " ;'"       # contains a space
+
+punctuator:
+  import_preset: default # no use_space, no ' ' entry (Lua / speller handle space)
+
+# ---------------------------------------------------------------------------
+# CONFIG-ONLY alternative (no Lua) -- verified: handles everything except
+# "empty buffer -> key goes straight to the application":
+#   speller:    { use_space: true, delimiter: " ;'" }
+#   segmentors: [... matcher, abc_segmentor, ...]   (drop the `abc` recognizer pattern)
+#   recognizer: { patterns: { reverse_lookup: "`[a-z]*'?$" } }   # no import_preset
+#   punctuator: { import_preset: default,
+#                 half_shape: { ',': '，', '.': '。', '?': '？', '!': '！', ':': '：' } }  # plain values append
