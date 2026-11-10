@@ -11,7 +11,7 @@ Full Cangjie 5 sentence-style input schema for Rime (Weasel on Windows), aiming 
 
 ## 狀態 / Status
 
-- 只在 Linux（librime 1.10 + librime-octagram）測過；**Windows 小狼毫尚未實測**。
+- Linux（librime 1.10 + librime-octagram）與 **Windows 11 + 小狼毫 0.17.4**（只測 v1，部署成功、`dhedhkb` → `板橋`）都測過；v2 尚未在 Windows 測。建議日常用 v1，理由見 `docs/xp-behavior-notes.md`。
 - 語言模型在我們的測試句上效果很小（51 句日常句 51/51 有無模型相同）；詳見 `weasel/docs/test-log.md`。
 - 單字碼要接空白（例如「中午」打 `l oj`）。
 - 語言模型檔 `zh-hant-t-essay-bgw.gram`（約 39.5 MB）不在本倉庫，下載方式見 `weasel/README.zh-TW.md`。
