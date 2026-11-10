@@ -9,6 +9,9 @@ Full Cangjie 5 sentence-style input schema for Rime (Weasel on Windows), aiming 
 - `lua/` — 空緩衝區直接送字的 Lua 處理器草稿（**未測試**）
 - `docs/rime-quick-2-comment*.md` — 送給 rime/rime-quick#2 的留言
 
+**其他平台 / Other platforms:** Linux（fcitx5-rime、fcitx-rime、ibus-rime）→ [githubhjs/cangjie-fluency-linux](https://github.com/githubhjs/cangjie-fluency-linux)；
+macOS（鼠鬚管 Squirrel）→ [githubhjs/cangjie-fluency-macos](https://github.com/githubhjs/cangjie-fluency-macos)。兩者都是從本倉庫下載方案檔，只多一個安裝腳本。
+
 ## 一鍵安裝（Windows 10/11，需要能裝軟體的管理員權限） / One-click install
 
 在 PowerShell 貼一行（用一般使用者執行，只有裝小狼毫那一步會跳 UAC）：
