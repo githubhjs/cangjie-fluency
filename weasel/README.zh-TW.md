@@ -3,8 +3,9 @@
 目標：全碼倉頡五代（不是速成），像微軟新倉頡一樣「整句輸入」：一路打下去不選字，緩衝區會隨著
 你繼續輸入、用詞庫＋語言模型重新斷詞，所以「板橋」不會停在「皮橋」。
 
-> 狀態：Linux（librime 1.10 + librime-octagram）測試通過，**尚未在 Windows 11 / 小狼毫實測**。
-> 測試過程與真實輸出見 `docs/test-log.md`。
+> 狀態：Linux（librime 1.10 + librime-octagram）測試通過。
+> **Windows 11 + 小狼毫 0.17.4 已實測（2026-11-10）**：部署成功、`dhedhkb` → `板橋`、日誌有 `use grammar`。
+> 見第 10 節。Linux 測試過程與真實輸出見 `docs/test-log.md`。
 
 ## 1. 檔案
 
@@ -24,8 +25,8 @@
 
 | 檔案 | 大小（實測） | 下載位置 | 放哪裡 |
 |---|---|---|---|
-| `cangjie5.base.dict.yaml` | 219,115 B（約 214 KB） | https://raw.githubusercontent.com/rime/rime-cangjie/master/cangjie5.base.dict.yaml | 小狼毫通常已內建（見下） |
-| `essay.txt` | 5,887,319 B（約 5.6 MB） | https://raw.githubusercontent.com/rime/rime-essay/master/essay.txt | 小狼毫通常已內建（見下） |
+| `cangjie5.base.dict.yaml` | 219,115 B（約 214 KB） | https://raw.githubusercontent.com/rime/rime-cangjie/master/cangjie5.base.dict.yaml | `%APPDATA%\Rime\`（**小狼毫 0.17.4 不內建，必須自己下載**，見下） |
+| `essay.txt` | 5,887,319 B（約 5.6 MB） | https://raw.githubusercontent.com/rime/rime-essay/master/essay.txt | 小狼毫 0.17.4 已內建（`data\essay.txt`，6,330,573 B，版本不同但可用） |
 | `zh-hant-t-essay-bgw.gram` | 41,415,724 B（約 39.5 MiB） | https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-essay-bgw.gram（注意是 **hant 分支**） | `%APPDATA%\Rime\`（**小狼毫不內建，必須自己下載**；不要 commit 進 git，已列入 `.gitignore`） |
 | `grammar.yaml`（選用） | 775 B | https://raw.githubusercontent.com/lotem/rime-octagram-data/master/grammar.yaml | `%APPDATA%\Rime\`；本方案已把同樣設定寫在 schema 內，缺這個檔也能用 |
 
@@ -42,11 +43,18 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 
 依據：小狼毫內建的「預設配方」（rime/plum 的 `preset-packages.conf`）包含 `cangjie`、`essay`、`prelude`、
 `luna-pinyin`、`quick` 等，所以理論上 `data\` 內會有 `cangjie5.base.dict.yaml` 和 `essay.txt`。
-這是從原始碼推論，**未在實際安裝檔內確認**（unverified）。
+
+**實測（小狼毫 0.17.4，2026-11-10）：這個推論只對一半。** `data\` 內有 `essay.txt`，但**沒有**
+`cangjie5.base.dict.yaml`（只有舊式單檔的 `cangjie5.dict.yaml`、`cangjie5.schema.yaml`、`cangjie5_express.schema.yaml`）。
+0.15.0 也一樣沒有。所以 `cangjie5.base.dict.yaml` 一定要自己下載放進 `%APPDATA%\Rime\`，否則詞庫編不起來。
 
 ## 3. 小狼毫有沒有內建 librime-octagram？（語言模型外掛）
 
-**未直接確認（unverified），但證據偏正面：**
+**實測確認（小狼毫 0.17.4，2026-11-10）：有內建。** `rime.dll` 內含 `octagram.cc` 字串，
+切換到「倉頡整句」後日誌出現 `octagram.cc:29] use grammar: zh-hant-t-essay-bgw`。
+注意：這行**部署時不會出現**，要等實際在某個程式裡切到這個方案開始打字（建立 session）才會印出。
+
+以下是實測前從原始碼找到的依據：
 
 * rime/librime 的 Windows 發佈 CI（`.github/workflows/release-ci.yml`）建置時加入的外掛為
   `hchunhui/librime-lua lotem/librime-octagram rime/librime-predict`。
@@ -70,7 +78,8 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 ## 5. 部署與切換
 
 1. 把檔案放好後，在工具列小狼毫圖示按右鍵 → **重新部署**（或開始功能表 →「小狼毫輸入法」→「重新部署」）。
-2. 第一次部署要編譯詞庫（Linux aarch64 約 3.3 秒、產生約 17 MB 的 table；Windows 時間未測），
+2. 第一次部署要編譯詞庫（Linux aarch64 約 3.3 秒、產生約 17 MB 的 table；Windows 11 筆電上整個部署約 33 秒，
+   `cangjie5_fluency.table.bin` 17,466,708 B），
    完成會跳出「部署完成」類通知。
 3. 切換方案：按 `Ctrl` + 反引號鍵（鍵盤左上角 1 左邊那顆）或 `F4` 打開方案選單，選「倉頡整句」。
 4. 改過 yaml 或換了 .gram 都要再「重新部署」一次。
@@ -111,8 +120,13 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
 
 ## 7. 若部署失敗 / 編譯不過
 
-1. 看日誌：`%TEMP%\rime.weasel.*`（例如 `%TEMP%\rime.weasel.<電腦名>.<使用者>.log.ERROR.*`、`...INFO.*`；
-   在檔案總管網址列貼 `%TEMP%` 後搜尋 `rime.weasel`）。先看 ERROR / WARNING 檔，再看 INFO。
+1. 看日誌：**小狼毫 0.17.4 放在資料夾 `%TEMP%\rime.weasel\`**（例如
+   `%TEMP%\rime.weasel\rime.weasel.<電腦名>.<使用者>.log.INFO.<日期>-<時間>.<pid>.log`）；
+   舊版（0.15.0 實測）則是直接放在 `%TEMP%\rime.weasel.*`。先看 ERROR / WARNING 檔，再看 INFO。
+   PowerShell 一行找語言模型：
+   `Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern 'use grammar' | Select -Last 3`
+   * WARNING 檔有數百行 `Encode failure` 和 `duplicate word definition` 是正常的（essay 內碼表沒有的字詞被略過）。
+   * `nonexistent config file '...\grammar.yaml'` 也是正常的（選用檔，見第 2 節）。
 2. 常見原因：
    * `missing input file` / `cangjie5.base` 找不到 → 第 2 節的 `cangjie5.base.dict.yaml` 沒放好。
    * `essay.txt` 找不到：詞庫只剩單字，整句效果很差 → 補上 essay.txt。
@@ -147,3 +161,33 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
 * 方案設計取自 eight04 在 rime/rime-quick issue #2 提出的 `quick5_fluency`（fluency_editor、不使用
   abc_segmentor、`abc` recognizer pattern、單碼補空格、punctuator 空格處理）。
 * 碼表 rime/rime-cangjie；詞彙 rime/rime-essay；語言模型 lotem/rime-octagram-data（`hant` 分支）。
+
+## 10. Windows 實測紀錄（2026-11-10）
+
+環境：Windows 11 Pro 10.0.26300、小狼毫由 0.15.0 升級到 **0.17.4**（`weasel-0.17.4.0-installer.exe`，
+12,431,118 B，SHA-256 `CF509534A8F5F8AF9C98ED7CBB8F135439F145A8CBE7E50EDE42BB5B5AB45C29`，官方安裝檔本來就沒有數位簽章）、
+Windows Terminal 1.24.2610.1001。只測 v1（`cangjie5_fluency`）。
+
+| 項目 | 結果 |
+|---|---|
+| `cangjie5.base.dict.yaml` 內建？ | **否**，自己下載（219,115 B） |
+| `essay.txt` 內建？ | 是（`data\essay.txt`，6,330,573 B） |
+| `.gram` | 自己下載，41,415,724 B（與上表一致） |
+| `default.custom.yaml` | 與原有檔案合併（`cangjie5_fluency` 加在第一個），沒有覆蓋 |
+| 部署 | `WeaselDeployer.exe /deploy` exit 0，約 33 秒，無 ERROR |
+| octagram | 日誌 `octagram.cc:29] use grammar: zh-hant-t-essay-bgw` ✅ |
+| `dhedhkb` | `板橋` ✅ |
+
+### 升級後 Windows Terminal 閃退（已知原因：升級時 Terminal 還開著）
+
+升級後第一次在一個**升級前就開著（已跑 8 天）**的 Windows Terminal 裡切到小狼毫打字，Terminal 立刻閃退。
+重新開一個 Terminal 之後就正常。
+
+* 事件檢視器：`WindowsTerminal.exe`、faulting module `ucrtbase.dll`、例外碼 `0xc0000409`（fail-fast，
+  實際是未被接住的 C++ 例外 → `terminate()` → `abort()`）。
+* 用 cdb 看 `%LOCALAPPDATA%\CrashDumps\WindowsTerminal.exe.<pid>.dmp`：例外由 Terminal 進程內載入的
+  小狼毫 TSF 模組 `C:\Windows\System32\weasel.dll`（0.17.4）丟出，是 boost::archive 的
+  **`unsupported version`**，發生在反序列化 server 傳來的 `weasel::UIStyle` 時，也就是輸入法前端與
+  WeaselServer 之間的資料格式版本對不上。
+* 結論：在其他程式還開著（已載入舊版輸入法）的情況下原地升級小狼毫，那些舊程式內的輸入法狀態會和新版
+  server 衝突。**升級小狼毫後請登出再登入（或重開機）**，至少要把升級前就開著、用過小狼毫的程式全部重開。
