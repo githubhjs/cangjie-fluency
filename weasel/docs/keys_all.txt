@@ -1,0 +1,29 @@
+keys:`ban
+keys:`ban'
+keys:dhe dhkb
+keys:dhedhkb
+keys:dhedhkb!
+keys:dhedhkb,
+keys:dhedhkb-
+keys:dhedhkb.
+keys:dhedhkb;
+keys:dhedhkb=
+keys:dhedhkb?
+keys:dhedhkbA
+keys:dhedhkbAb
+keys:dhedhkb{BackSpace}
+keys:dhedhkb{BackSpace}{BackSpace}
+keys:dhedhkb{Escape}
+keys:dhedhkb.{Return}
+keys:dhedhkb{Return}
+keys:dhedhkb{Shift_L}
+keys:dhedhkb{space}
+keys:dhedhkb{space}dhe
+keys:dhedhkb{space}{Return}
+keys:dhedhkb{space}{space}
+keys:dhedhkb.x
+keys:Hello
+keys:ldhe
+keys:l oj
+keys:l oj{space}
+keys:l{space}oj

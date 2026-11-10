@@ -1,0 +1,16 @@
+# encoding: utf-8
+#
+# 把 cangjie5_fluency 加進方案選單 (Weasel: %APPDATA%\Rime\default.custom.yaml)
+#
+# *** 若你已經有自己的 default.custom.yaml，請不要覆蓋它！ ***
+# 只要把下面 schema_list 裡「- schema: cangjie5_fluency」那一行
+# 加進你原本的 schema_list 清單（放在第一個 = 預設方案）。
+#
+# 注意：patch 裡的 schema_list 會「整份取代」預設清單，所以
+# 想保留其他方案（例如 luna_pinyin）必須自己列出來。
+
+patch:
+  schema_list:
+    - schema: cangjie5_fluency   # 倉頡整句（本專案）
+    - schema: cangjie5           # 一般倉頡五代（選用，Weasel 內建）
+    - schema: luna_pinyin        # 朙月拼音（選用，Weasel 內建）

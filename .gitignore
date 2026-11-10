@@ -1,0 +1,7 @@
+*.bin
+build/
+dl/
+*.gram
+rimebin/
+src/
+testenv/

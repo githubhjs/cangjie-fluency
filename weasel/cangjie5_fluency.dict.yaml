@@ -1,0 +1,18 @@
+# Rime dictionary
+# encoding: utf-8
+#
+# Full Cangjie 5 (not Quick/速成): only the single-character base table is
+# imported. Phrase entries are generated from the preset vocabulary
+# (essay.txt) by combining the full Cangjie code of each character.
+#
+# Requires cangjie5.base.dict.yaml (from rime/rime-cangjie) and essay.txt
+# in the same user data / shared data directory.
+
+---
+name: cangjie5_fluency
+version: "0.1"
+sort: by_weight
+use_preset_vocabulary: true
+import_tables:
+  - cangjie5.base
+...

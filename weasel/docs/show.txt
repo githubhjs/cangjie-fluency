@@ -1,0 +1,7 @@
+phrase:板橋
+phrase:中午
+phrase:已經
+phrase:恐怖
+phrase:知道
+phrase:我們明天中午去板橋吃飯
+phrase:這個週末我想要去台北看電影
