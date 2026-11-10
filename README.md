@@ -9,6 +9,20 @@ Full Cangjie 5 sentence-style input schema for Rime (Weasel on Windows), aiming 
 - `lua/` — 空緩衝區直接送字的 Lua 處理器草稿（**未測試**）
 - `docs/rime-quick-2-comment*.md` — 送給 rime/rime-quick#2 的留言
 
+## 一鍵安裝（Windows 10/11，需要能裝軟體的管理員權限） / One-click install
+
+在 PowerShell 貼一行（用一般使用者執行，只有裝小狼毫那一步會跳 UAC）：
+
+```powershell
+irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1 | iex
+```
+
+或到 [Releases](https://github.com/githubhjs/cangjie-fluency/releases) 下載壓縮包，解壓縮後雙擊 `install.bat`。
+
+腳本會：安裝小狼毫（用 winget，沒裝才裝）→ 下載缺的碼表與語言模型 → 複製方案 → 保守合併 `default.custom.yaml`（先備份）→ 重新部署。
+裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 切到 `cangjie5_fluency`。可用 `-DryRun` 先看它會做什麼。
+**腳本在 Linux 的 PowerShell 上驗證過邏輯，Windows 上的完整流程尚待實測。**
+
 ## 狀態 / Status
 
 - Linux（librime 1.10 + librime-octagram）與 **Windows 11 + 小狼毫 0.17.4**（只測 v1，部署成功、`dhedhkb` → `板橋`）都測過；v2 尚未在 Windows 測。建議日常用 v1，理由見 `docs/xp-behavior-notes.md`。
