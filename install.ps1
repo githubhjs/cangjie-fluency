@@ -324,7 +324,10 @@ if ($NoDeploy -or $DryRun -or -not $weasel) {
   Say 'skipping deploy. Run later: Start menu > Weasel > Redeploy'
 } else {
   Say 'deploying (takes about 30 seconds on first run)...'
-  $p = Start-Process -FilePath (Join-Path $weasel 'WeaselDeployer.exe') -ArgumentList '/deploy' -Wait -PassThru
+  # Process.Start with a plain argument string: Windows PowerShell 5.1's Start-Process -ArgumentList '/deploy' sent "/deploy "
+  # (trailing space), which WeaselDeployer does not recognise, so it opened the schema/theme wizard and waited for the user.
+  $p = [Diagnostics.Process]::Start((Join-Path $weasel 'WeaselDeployer.exe'), '/deploy')
+  $p.WaitForExit()
   if ($p.ExitCode -ne 0) { Warn "WeaselDeployer exit code $($p.ExitCode). Look at %TEMP%\rime.weasel\ for ERROR logs." } else { Say 'deploy finished.' }
 }
 
