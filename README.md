@@ -21,6 +21,9 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 
 腳本會：安裝小狼毫（用 winget，沒裝才裝）→ 下載缺的碼表與語言模型 → 複製方案 → 保守合併 `default.custom.yaml`（先備份）→ 重新部署。
 裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 切到 `cangjie5_fluency`。可用 `-DryRun` 先看它會做什麼。
+
+已經在用東風破（[plum](https://github.com/rime/plum)）的人也可以：`rime-install githubhjs/cangjie-fluency`
+（會下載碼表與語言模型、安裝方案，並把 `cangjie5_fluency` 附加到 `schema_list` 的最後面；Windows 需要 plum 的 bootstrap 包，內含 git、7z）。
 **腳本在 Linux 的 PowerShell 上驗證過邏輯，Windows 上的完整流程尚待實測。**
 
 ## 狀態 / Status
