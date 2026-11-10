@@ -1,0 +1,20 @@
+# encoding: utf-8
+---
+recipe:
+  Rx: cangjie-fluency
+  description: >-
+    cangjie5_fluency: full Cangjie 5 sentence-style input (auto-correcting buffer).
+    Downloads the code table and the language model from upstream and adds the schema to schema_list.
+download_files: >-
+  cangjie5.base.dict.yaml::https://raw.githubusercontent.com/rime/rime-cangjie/master/cangjie5.base.dict.yaml
+  zh-hant-t-essay-bgw.gram::https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-essay-bgw.gram
+install_files: >-
+  weasel/cangjie5_fluency.schema.yaml
+  weasel/cangjie5_fluency.dict.yaml
+  cangjie5.base.dict.yaml
+  zh-hant-t-essay-bgw.gram
+patch_files:
+  default.custom.yaml:
+    patch:
+      "schema_list/+":
+        - schema: cangjie5_fluency
