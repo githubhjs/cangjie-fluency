@@ -70,8 +70,11 @@ $do5 = [bool]($Cangjie5 -or $WithV2 -or $NoCangjie3)     # 5th generation only w
 
 function Say($m)  { Write-Host "[cangjie-fluency] $m" }
 function Zh($m) { Write-Host ('                  ' + [regex]::Unescape($m)) }
+function U($m) { return [regex]::Unescape($m) }
+function ZhL($m) { Write-Host ('                  ' + $m) }
+function ZhW($m) { Write-Host ('                  ' + $m) -ForegroundColor Yellow }
 function Warn($m) { Write-Host "[cangjie-fluency] WARNING: $m" -ForegroundColor Yellow }
-function Fail($m) { throw $m }   # caught at the bottom; never use exit (it would close the user's PowerShell under iex)
+function Fail($m, $zh = '') { $ex = New-Object System.Exception $m; if ($zh) { $ex.Data['zh'] = $zh }; throw $ex }   # caught at the bottom; never use exit (it would close the user's PowerShell under iex)
 
 function Write-Utf8NoBom($path, $text) {
   [IO.File]::WriteAllText($path, $text, (New-Object Text.UTF8Encoding($false)))
@@ -80,7 +83,7 @@ function Write-Utf8NoBom($path, $text) {
 function Backup-IfExists($path) {
   if (Test-Path $path) {
     $bak = "$path.bak-$Stamp"
-    if ($DryRun) { Say "DRY: would back up $path -> $bak" } else { Copy-Item $path $bak; Say "backed up $path -> $bak" }
+    if ($DryRun) { Say "DRY: would back up $path -> $bak"; ZhL ((U '\u9810\u8a08\u5099\u4efd\uff1a') + "$path -> $bak") } else { Copy-Item $path $bak; Say "backed up $path -> $bak"; ZhL ((U '\u5df2\u5099\u4efd\uff1a') + "$path -> $bak") }
   }
 }
 
@@ -101,10 +104,10 @@ function Same-Content($a, $b) {
 function Place-File($tmp, $dest) {
   $leaf = Split-Path $dest -Leaf
   try {
-    if (Same-Content $tmp $dest) { Remove-Item $tmp -Force; Say "up to date: $leaf"; return }
+    if (Same-Content $tmp $dest) { Remove-Item $tmp -Force; Say "up to date: $leaf"; ZhL ((U '\u5df2\u662f\u6700\u65b0\uff1a') + $leaf); return }
     if (Test-Path $dest) { Backup-IfExists $dest; Remove-Item $dest -Force }
     Move-Item $tmp $dest
-    Say "installed: $leaf"
+    Say "installed: $leaf"; ZhL ((U '\u5df2\u5b89\u88dd\uff1a') + $leaf)
   } catch {
     if (Test-Path $tmp) { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }   # never leave a *.part behind
     throw
@@ -169,16 +172,17 @@ function Convert-CinToRime($cinPath, $outPath, $essayPath) {
   }
   [IO.File]::WriteAllText($outPath, $sb.ToString(), (New-Object Text.UTF8Encoding($false)))
   Say "converted table: $written entries ($multi multi-character skipped, $dup duplicates skipped)"
+  ZhL ((U '\u5df2\u8f49\u63db\u78bc\u8868\uff1a') + $written + (U ' \u7b46\uff08\u7565\u904e\u591a\u5b57\u8a5e ') + $multi + (U ' \u7b46\u3001\u91cd\u8907 ') + $dup + (U ' \u7b46\uff09'))
 }
 
 function Get-Remote($url, $dest, $minBytes, $exactBytes) {
-  if ($DryRun) { Say "DRY: would download $url -> $dest"; return }
+  if ($DryRun) { Say "DRY: would download $url -> $dest"; ZhL ((U '\u9810\u8a08\u4e0b\u8f09\uff1a') + "$url -> $dest"); return }
   $tmp = "$dest.part"
-  Say "downloading $url"
+  Say "downloading $url"; ZhL ((U '\u4e0b\u8f09\u4e2d\uff1a') + $url)
   Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
   $len = (Get-Item $tmp).Length
-  if ($exactBytes -gt 0 -and $len -ne $exactBytes) { Remove-Item $tmp -Force; Fail "$dest has $len bytes, expected $exactBytes" }
-  if ($len -lt $minBytes) { Remove-Item $tmp -Force; Fail "$dest is only $len bytes, the download looks wrong" }
+  if ($exactBytes -gt 0 -and $len -ne $exactBytes) { Remove-Item $tmp -Force; Fail "$dest has $len bytes, expected $exactBytes" ($dest + (U ' \u7684\u5927\u5c0f\u662f ') + $len + (U ' \u4f4d\u5143\u7d44\uff0c\u9810\u671f\u70ba ') + $exactBytes + (U ' \u4f4d\u5143\u7d44')) }
+  if ($len -lt $minBytes) { Remove-Item $tmp -Force; Fail "$dest is only $len bytes, the download looks wrong" ($dest + (U ' \u53ea\u6709 ') + $len + (U ' \u4f4d\u5143\u7d44\uff0c\u4e0b\u8f09\u5167\u5bb9\u4f3c\u4e4e\u4e0d\u6b63\u78ba')) }
   Place-File $tmp $dest
 }
 
@@ -195,14 +199,14 @@ function Get-Staged($rel, $url, $sha, $minBytes) {
   $leaf = Split-Path $rel -Leaf
   $tmp = Join-Path ([IO.Path]::GetTempPath()) ("cjf-$Stamp-$leaf")
   $src = Find-Local $rel
-  if ($src) { Copy-Item $src $tmp -Force; Say "using $src" }
-  elseif ($Offline) { Fail "$leaf is not next to this script and -Offline was given" }
-  else { Say "downloading $url"; Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing }
+  if ($src) { Copy-Item $src $tmp -Force; Say "using $src"; ZhL ((U '\u4f7f\u7528\u672c\u6a5f\u6a94\u6848\uff1a') + $src) }
+  elseif ($Offline) { Fail "$leaf is not next to this script and -Offline was given" ($leaf + (U ' \u4e0d\u5728\u6b64\u8173\u672c\u65c1\u908a\uff0c\u800c\u4e14\u5df2\u6307\u5b9a -Offline')) }
+  else { Say "downloading $url"; ZhL ((U '\u4e0b\u8f09\u4e2d\uff1a') + $url); Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing }
   $len = (Get-Item $tmp).Length
-  if ($len -lt $minBytes) { Remove-Item $tmp -Force; Fail "$leaf is only $len bytes, the download looks wrong" }
+  if ($len -lt $minBytes) { Remove-Item $tmp -Force; Fail "$leaf is only $len bytes, the download looks wrong" ($leaf + (U ' \u53ea\u6709 ') + $len + (U ' \u4f4d\u5143\u7d44\uff0c\u4e0b\u8f09\u5167\u5bb9\u4f3c\u4e4e\u4e0d\u6b63\u78ba')) }
   if ($sha) {
     $got = ((Get-Sha256 $tmp) -replace '-', '').ToLower()
-    if ($got -ne $sha) { Remove-Item $tmp -Force; Fail "$leaf SHA-256 is $got, expected $sha" }
+    if ($got -ne $sha) { Remove-Item $tmp -Force; Fail "$leaf SHA-256 is $got, expected $sha" ($leaf + (U ' \u7684 SHA-256 \u662f ') + $got + (U '\uff0c\u9810\u671f\u70ba ') + $sha) }
   }
   return $tmp
 }
@@ -225,18 +229,19 @@ function Find-Weasel {
 # ---------- 1. Weasel ----------
 $weasel = Find-Weasel
 if (-not $weasel) {
-  if ($SkipWeaselInstall) { Fail 'Weasel is not installed (WeaselDeployer.exe not found). Run the installer that ships with this project (deps-v1 release) and run this again.' }
-  if ($DryRun) { Say "DRY: Weasel not found; would install $WeaselInstaller (bundled or from $DepsUrl)" }
+  if ($SkipWeaselInstall) { Fail 'Weasel is not installed (WeaselDeployer.exe not found). Run the installer that ships with this project (deps-v1 release) and run this again.' (U '\u627e\u4e0d\u5230 Weasel\uff08\u6c92\u6709 WeaselDeployer.exe\uff09\u3002\u8acb\u5148\u57f7\u884c\u672c\u5c08\u6848\u9644\u7684\u5b89\u88dd\u7a0b\u5f0f\uff08deps-v1 release\uff09\uff0c\u518d\u91cd\u65b0\u57f7\u884c\u672c\u8173\u672c\u3002') }
+  if ($DryRun) { Say "DRY: Weasel not found; would install $WeaselInstaller (bundled or from $DepsUrl)"; ZhL ((U '\u9810\u8a08\uff1a\u627e\u4e0d\u5230 Weasel\uff0c\u5c07\u5b89\u88dd ') + $WeaselInstaller + (U '\uff08\u96a8\u9644\u6216\u5f9e ') + $DepsUrl + (U ' \u4e0b\u8f09\uff09')) }
   else {
     $inst = $null
-    try { $inst = Get-Staged ("deps\" + $WeaselInstaller) ("$DepsUrl/$WeaselInstaller") $WeaselSha 5000000 } catch { Warn "Weasel installer from this project not available: $($_.Exception.Message)" }
+    try { $inst = Get-Staged ("deps\" + $WeaselInstaller) ("$DepsUrl/$WeaselInstaller") $WeaselSha 5000000 } catch { Warn "Weasel installer from this project not available: $($_.Exception.Message)"; ZhW ((U '\u7121\u6cd5\u53d6\u5f97\u672c\u5c08\u6848\u7684 Weasel \u5b89\u88dd\u7a0b\u5f0f\uff1a') + $_.Exception.Message) }
     if ($inst) {
       Say 'Installing Weasel 0.17.4 from the project copy (a UAC prompt will appear; accept it)...'
+      ZhL (U '\u6b63\u5728\u5f9e\u672c\u5c08\u6848\u63d0\u4f9b\u7684\u6a94\u6848\u5b89\u88dd Weasel 0.17.4\uff08\u6703\u8df3\u51fa UAC \u63d0\u793a\uff0c\u8acb\u6309\u300c\u662f\u300d\uff09...')
       try {
         $psi = New-Object Diagnostics.ProcessStartInfo
         $psi.FileName = $inst; $psi.Arguments = '/S'; $psi.UseShellExecute = $true; $psi.Verb = 'runas'
         $pr = [Diagnostics.Process]::Start($psi); $pr.WaitForExit()
-      } catch { Warn "Weasel installer did not run: $($_.Exception.Message)" }
+      } catch { Warn "Weasel installer did not run: $($_.Exception.Message)"; ZhW ((U 'Weasel \u5b89\u88dd\u7a0b\u5f0f\u6c92\u6709\u57f7\u884c\uff1a') + $_.Exception.Message) }
       Remove-Item $inst -Force -ErrorAction SilentlyContinue
       $weasel = Find-Weasel
     }
@@ -244,14 +249,15 @@ if (-not $weasel) {
       $winget = Get-Command winget -ErrorAction SilentlyContinue
       if ($winget) {
         Say 'Falling back to winget (a UAC prompt will appear; accept it)...'
+        ZhL (U '\u6539\u7528 winget \u5b89\u88dd\uff08\u6703\u8df3\u51fa UAC \u63d0\u793a\uff0c\u8acb\u6309\u300c\u662f\u300d\uff09...')
         & winget install --id Rime.Weasel -e --accept-package-agreements --accept-source-agreements
         $weasel = Find-Weasel
       }
     }
-    if (-not $weasel) { Fail 'Weasel could not be installed. Install weasel-0.17.4.0-installer.exe from the deps-v1 release of this project (run it as administrator), then run this script again.' }
+    if (-not $weasel) { Fail 'Weasel could not be installed. Install weasel-0.17.4.0-installer.exe from the deps-v1 release of this project (run it as administrator), then run this script again.' (U '\u7121\u6cd5\u5b89\u88dd Weasel\u3002\u8acb\u4ee5\u7cfb\u7d71\u7ba1\u7406\u54e1\u8eab\u5206\u57f7\u884c\u672c\u5c08\u6848 deps-v1 release \u88e1\u7684 weasel-0.17.4.0-installer.exe\uff0c\u7136\u5f8c\u518d\u57f7\u884c\u672c\u8173\u672c\u3002') }
   }
 }
-if ($weasel) { Say "Weasel found: $weasel" } else { Say 'DRY: continuing without a Weasel folder.' }
+if ($weasel) { Say "Weasel found: $weasel"; ZhL ((U '\u5df2\u627e\u5230 Weasel\uff1a') + $weasel) } else { Say 'DRY: continuing without a Weasel folder.'; ZhL (U '\u9810\u8a08\uff1a\u5728\u6c92\u6709 Weasel \u8cc7\u6599\u593e\u7684\u60c5\u6cc1\u4e0b\u7e7c\u7e8c\u3002') }
 $dataDir = ''
 if ($weasel) { $dataDir = Join-Path $weasel 'data' }
 
@@ -261,8 +267,8 @@ if ($RimeDir -eq '') {
   try { $reg = (Get-ItemProperty 'HKCU:\Software\Rime\Weasel' -ErrorAction Stop).RimeUserDir } catch { }
   if ($reg) { $RimeDir = $reg } else { $RimeDir = Join-Path $env:APPDATA 'Rime' }
 }
-Say "Rime user folder: $RimeDir"
-if (-not (Test-Path $RimeDir)) { if ($DryRun) { Say "DRY: would create $RimeDir" } else { New-Item -ItemType Directory -Path $RimeDir | Out-Null } }
+Say "Rime user folder: $RimeDir"; ZhL ((U 'Rime \u4f7f\u7528\u8005\u8cc7\u6599\u593e\uff1a') + $RimeDir)
+if (-not (Test-Path $RimeDir)) { if ($DryRun) { Say "DRY: would create $RimeDir"; ZhL ((U '\u9810\u8a08\u5efa\u7acb\uff1a') + $RimeDir) } else { New-Item -ItemType Directory -Path $RimeDir | Out-Null } }
 
 # ---------- 3. schema files (local copy next to this script, else download) ----------
 $here = $PSScriptRoot
@@ -277,10 +283,10 @@ foreach ($f in $schemaFiles) {
     foreach ($c in @((Join-Path $here $f), (Join-Path (Join-Path $here 'weasel') $f))) { if (Test-Path $c) { $local = $c; break } }
   }
   if ($local) {
-    if ($DryRun) { Say "DRY: would copy $local -> $dest" }
+    if ($DryRun) { Say "DRY: would copy $local -> $dest"; ZhL ((U '\u9810\u8a08\u8907\u88fd\uff1a') + "$local -> $dest") }
     else { $tmp = "$dest.part"; Copy-Item $local $tmp -Force; Place-File $tmp $dest }
   } else {
-    if ($Offline) { Fail "$f is not next to this script and -Offline was given" }
+    if ($Offline) { Fail "$f is not next to this script and -Offline was given" ($f + (U ' \u4e0d\u5728\u6b64\u8173\u672c\u65c1\u908a\uff0c\u800c\u4e14\u5df2\u6307\u5b9a -Offline')) }
     Get-Remote "$SchemaRaw/$f" $dest 500 0
   }
 }
@@ -289,8 +295,8 @@ foreach ($f in $schemaFiles) {
 if ($do5) {
   $base = Join-Path $RimeDir 'cangjie5.base.dict.yaml'
   $haveBase = (Test-Path $base) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'cangjie5.base.dict.yaml')))
-  if ($haveBase) { Say 'cangjie5.base.dict.yaml already present.' }
-  elseif ($DryRun) { Say "DRY: would install tables\cangjie5.base.dict.yaml from this project" }
+  if ($haveBase) { Say 'cangjie5.base.dict.yaml already present.'; ZhL (U 'cangjie5.base.dict.yaml \u5df2\u5b58\u5728\u3002') }
+  elseif ($DryRun) { Say "DRY: would install tables\cangjie5.base.dict.yaml from this project"; ZhL (U '\u9810\u8a08\u5f9e\u672c\u5c08\u6848\u5b89\u88dd tables\\cangjie5.base.dict.yaml') }
   else { $t5 = Get-Staged 'tables\cangjie5.base.dict.yaml' $BaseDictUrl $BaseDictSha 100000; Place-File $t5 $base }
 }
 
@@ -300,17 +306,18 @@ $essay = Join-Path $RimeDir 'essay.txt'
 $essayPinned = $null
 if (-not $DryRun) { $essayPinned = Get-Staged 'data\essay.txt' $EssayUrl $EssaySha 1000000 }
 $haveEssay = (Test-Path $essay) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'essay.txt')))
-if ($haveEssay) { Say 'essay.txt already present in Weasel or the user folder.' }
-elseif ($DryRun) { Say 'DRY: would install data\essay.txt from this project' }
+if ($haveEssay) { Say 'essay.txt already present in Weasel or the user folder.'; ZhL (U 'Weasel \u6216\u4f7f\u7528\u8005\u8cc7\u6599\u593e\u88e1\u5df2\u6709 essay.txt\u3002') }
+elseif ($DryRun) { Say 'DRY: would install data\essay.txt from this project'; ZhL (U '\u9810\u8a08\u5f9e\u672c\u5c08\u6848\u5b89\u88dd data\\essay.txt') }
 else { Copy-Item $essayPinned "$essay.part" -Force; Place-File "$essay.part" $essay }
 
 if ($dataDir -and -not (Test-Path (Join-Path $dataDir 'luna_quanpin.schema.yaml')) -and -not (Test-Path (Join-Path $RimeDir 'luna_quanpin.schema.yaml'))) {
   Warn 'luna_quanpin.schema.yaml not found in Weasel data; pinyin reverse lookup may fail to compile. Update Weasel.'
+  ZhW (U 'Weasel \u7684 data \u88e1\u627e\u4e0d\u5230 luna_quanpin.schema.yaml\uff1b\u62fc\u97f3\u53cd\u67e5\u53ef\u80fd\u7121\u6cd5\u7de8\u8b6f\u3002\u8acb\u66f4\u65b0 Weasel\u3002')
 }
 
 if ($do3) {
   $base3 = Join-Path $RimeDir 'cangjie3.base.dict.yaml'
-  if ($DryRun) { Say "DRY: would convert tables\mscj3.cin from this project and install cangjie3.base.dict.yaml" }
+  if ($DryRun) { Say "DRY: would convert tables\mscj3.cin from this project and install cangjie3.base.dict.yaml"; ZhL (U '\u9810\u8a08\u8f49\u63db\u672c\u5c08\u6848\u7684 tables\\mscj3.cin \u4e26\u5b89\u88dd cangjie3.base.dict.yaml') }
   else {
     $cinTmp = Get-Staged 'tables\mscj3.cin' $Cin3Url $Cin3Sha256 100000
     $tmp3 = "$base3.part"
@@ -322,9 +329,9 @@ if ($do3) {
 if ($essayPinned) { Remove-Item $essayPinned -Force -ErrorAction SilentlyContinue }
 
 $gram = Join-Path $RimeDir 'zh-hant-t-essay-bgw.gram'
-if ($NoModel) { Say 'skipping language model (-NoModel).' }
-elseif ((Test-Path $gram) -and ((Get-Item $gram).Length -eq $GramSize) -and ((((Get-Sha256 $gram) -replace '-', '').ToLower()) -eq $GramSha)) { Say 'language model already present.' }
-elseif ($DryRun) { Say 'DRY: would install data\zh-hant-t-essay-bgw.gram from this project' }
+if ($NoModel) { Say 'skipping language model (-NoModel).'; ZhL (U '\u7565\u904e\u8a9e\u8a00\u6a21\u578b\uff08-NoModel\uff09\u3002') }
+elseif ((Test-Path $gram) -and ((Get-Item $gram).Length -eq $GramSize) -and ((((Get-Sha256 $gram) -replace '-', '').ToLower()) -eq $GramSha)) { Say 'language model already present.'; ZhL (U '\u8a9e\u8a00\u6a21\u578b\u5df2\u5b58\u5728\u3002') }
+elseif ($DryRun) { Say 'DRY: would install data\zh-hant-t-essay-bgw.gram from this project'; ZhL (U '\u9810\u8a08\u5f9e\u672c\u5c08\u6848\u5b89\u88dd data\\zh-hant-t-essay-bgw.gram') }
 else { $tg = Get-Staged 'data\zh-hant-t-essay-bgw.gram' $GramUrl $GramSha $GramSize; Place-File $tg $gram }
 
 # ---------- 5. default.custom.yaml ----------
@@ -361,13 +368,14 @@ if (-not (Test-Path $dc)) {
   $freshLines = @('# encoding: utf-8', '# created by cangjie-fluency install.ps1', 'patch:', '  schema_list:')
   foreach ($id in $listBody) { $freshLines += "    - schema: $id" }
   $freshCrlf = ($freshLines -join "`r`n") + "`r`n"
-  if ($DryRun) { Say "DRY: would create $dc" } else { Write-Utf8NoBom $dc $freshCrlf; Say 'created default.custom.yaml' }
+  if ($DryRun) { Say "DRY: would create $dc"; ZhL ((U '\u9810\u8a08\u5efa\u7acb\uff1a') + $dc) } else { Write-Utf8NoBom $dc $freshCrlf; Say 'created default.custom.yaml'; ZhL (U '\u5df2\u5efa\u7acb default.custom.yaml') }
 } else {
   $txt = [IO.File]::ReadAllText($dc)
   # exact id match, so cangjie5_fluency is not confused with cangjie5_fluency_v2
   $missing = @($ids | Where-Object { $txt -notmatch ([regex]::Escape($_) + '(?![A-Za-z0-9_])') })
   if ($missing.Count -eq 0) {
     Say 'default.custom.yaml already lists everything needed.'
+    ZhL (U 'default.custom.yaml \u5df2\u5217\u51fa\u6240\u6709\u9700\u8981\u7684\u65b9\u6848\u3002')
   } else {
     $lines = $txt -split "`r?`n"
     $idx = -1
@@ -394,8 +402,8 @@ if (-not (Test-Path $dc)) {
         $new = $head + @($indent + '- schema: cangjie5_fluency_v2') + $tail
       }
       Backup-IfExists $dc
-      if ($DryRun) { Say "DRY: would add $($missing -join ', ') to schema_list in $dc" }
-      else { Write-Utf8NoBom $dc (($new -join "`r`n")); Say "added $($missing -join ', ') to the schema_list in your default.custom.yaml" }
+      if ($DryRun) { Say "DRY: would add $($missing -join ', ') to schema_list in $dc"; ZhL ((U '\u9810\u8a08\u5728 ') + $dc + (U ' \u7684 schema_list \u52a0\u5165\uff1a') + ($missing -join ', ')) }
+      else { Write-Utf8NoBom $dc (($new -join "`r`n")); Say "added $($missing -join ', ') to the schema_list in your default.custom.yaml"; ZhL ((U '\u5df2\u5728\u4f60\u7684 default.custom.yaml \u7684 schema_list \u52a0\u5165\uff1a') + ($missing -join ', ')) }
     } else {
       # No schema_list yet (for example the file Weasel's installer leaves behind). Add one under `patch:` with ours first
       # and Weasel's stock schemas after, so nothing the user had is lost.
@@ -421,10 +429,11 @@ if (-not (Test-Path $dc)) {
       }
       if ($new) {
         Backup-IfExists $dc
-        if ($DryRun) { Say "DRY: would add a schema_list ($($listBody -join ', ')) to $dc" }
-        else { Write-Utf8NoBom $dc (($new -join "`r`n") + "`r`n"); Say "added a schema_list to your default.custom.yaml: $($listBody -join ', ')" }
+        if ($DryRun) { Say "DRY: would add a schema_list ($($listBody -join ', ')) to $dc"; ZhL ((U '\u9810\u8a08\u5728 ') + $dc + (U ' \u52a0\u5165 schema_list\uff1a') + ($listBody -join ', ')) }
+        else { Write-Utf8NoBom $dc (($new -join "`r`n") + "`r`n"); Say "added a schema_list to your default.custom.yaml: $($listBody -join ', ')"; ZhL ((U '\u5df2\u5728\u4f60\u7684 default.custom.yaml \u52a0\u5165 schema_list\uff1a') + ($listBody -join ', ')) }
       } else {
         Warn "Your default.custom.yaml has a non-standard 'patch:' (inline mapping), so I did not edit it. Add this under 'patch:' yourself:"
+        ZhW (U '\u4f60\u7684 default.custom.yaml \u7684 patch: \u662f\u975e\u6a19\u6e96\u5beb\u6cd5\uff08\u884c\u5167\u5c0d\u61c9\uff09\uff0c\u6240\u4ee5\u6c92\u6709\u4fee\u6539\u5b83\u3002\u8acb\u81ea\u884c\u628a\u4e0b\u9762\u9019\u6bb5\u52a0\u5230 patch: \u5e95\u4e0b\uff1a')
         Write-Host "  schema_list:"
         foreach ($id in $listBody) { Write-Host "    - schema: $id" }
       }
@@ -435,13 +444,15 @@ if (-not (Test-Path $dc)) {
 # ---------- 6. deploy ----------
 if ($NoDeploy -or $DryRun -or -not $weasel) {
   Say 'skipping deploy. Run later: Start menu > Weasel > Redeploy'
+  ZhL (U '\u7565\u904e\u90e8\u7f72\u3002\u4e4b\u5f8c\u8acb\u57f7\u884c\uff1a\u958b\u59cb\u529f\u80fd\u8868 > Weasel > \u91cd\u65b0\u90e8\u7f72')
 } else {
   Say 'deploying (takes about 30 seconds on first run)...'
+  ZhL (U '\u90e8\u7f72\u4e2d\uff08\u7b2c\u4e00\u6b21\u7d04\u9700 30 \u79d2\uff09...')
   # Process.Start with a plain argument string: Windows PowerShell 5.1's Start-Process -ArgumentList '/deploy' sent "/deploy "
   # (trailing space), which WeaselDeployer does not recognise, so it opened the schema/theme wizard and waited for the user.
   $p = [Diagnostics.Process]::Start((Join-Path $weasel 'WeaselDeployer.exe'), '/deploy')
   $p.WaitForExit()
-  if ($p.ExitCode -ne 0) { Warn "WeaselDeployer exit code $($p.ExitCode). Look at %TEMP%\rime.weasel\ for ERROR logs." } else { Say 'deploy finished.' }
+  if ($p.ExitCode -ne 0) { Warn "WeaselDeployer exit code $($p.ExitCode). Look at %TEMP%\rime.weasel\ for ERROR logs."; ZhW ((U 'WeaselDeployer \u7d50\u675f\u4ee3\u78bc\u70ba ') + $p.ExitCode + (U '\u3002\u8acb\u67e5\u770b %TEMP%\\rime.weasel\\ \u88e1\u7684 ERROR \u8a18\u9304\u3002')) } else { Say 'deploy finished.'; ZhL (U '\u90e8\u7f72\u5b8c\u6210\u3002') }
 }
 
 # ---------- 7. what next ----------
@@ -466,5 +477,7 @@ Write-Host '     Loaded = a "use grammar" line and NO "failed to load grammar da
 Write-Host '     (The "use grammar" line is also printed when the .gram file is missing; the failure line is what tells them apart.)'
 } } catch {
   Write-Host "[cangjie-fluency] ERROR: $($_.Exception.Message)" -ForegroundColor Red
+  Write-Host ('                  ' + [regex]::Unescape('\u932f\u8aa4\uff1a') + $(if ($_.Exception.Data['zh']) { $_.Exception.Data['zh'] } else { $_.Exception.Message })) -ForegroundColor Red
   Write-Host '[cangjie-fluency] Stopped. Files written before this point are kept (existing ones were backed up as *.bak-<time>).' -ForegroundColor Red
+  Write-Host ('                  ' + [regex]::Unescape('\u5df2\u505c\u6b62\u3002\u5728\u6b64\u4e4b\u524d\u5beb\u5165\u7684\u6a94\u6848\u90fd\u6703\u4fdd\u7559\uff08\u539f\u6709\u6a94\u6848\u5df2\u5099\u4efd\u70ba *.bak-<\u6642\u9593>\uff09\u3002')) -ForegroundColor Red
 }

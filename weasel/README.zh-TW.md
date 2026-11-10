@@ -1,13 +1,21 @@
-# 倉頡整句（預設三代 cangjie3_fluency，可選五代 cangjie5_fluency）— 小狼毫 Weasel 安裝說明
+# 倉頡整句（預設三代 cangjie3_fluency，可選五代 cangjie5_fluency）— 小狼毫 Weasel 安裝說明 / Cangjie Fluency (default 3rd generation cangjie3_fluency, optional 5th generation cangjie5_fluency) — Weasel (小狼毫) installation guide
+
+English translation follows each section.
 
 目標：全碼倉頡（不是速成；**預設三代**，可選五代），像微軟新倉頡一樣「整句輸入」：一路打下去不選字，緩衝區會隨著
 你繼續輸入、用詞庫＋語言模型重新斷詞，所以「板橋」不會停在「皮橋」。
+
+Goal: full-code Cangjie (not Quick/Sucheng; **3rd generation by default**, 5th generation optional), with whole-sentence input like Microsoft New Cangjie: keep typing without choosing characters, and the buffer is re-segmented with the dictionary plus a language model as you continue typing, so "板橋" does not stop at "皮橋".
 
 > 狀態：Linux（librime 1.10 + librime-octagram）測試通過。
 > **Windows 11 + 小狼毫 0.17.4 已實測（2026-11-10）**：部署成功、`dhedhkb` → `板橋`、日誌有 `use grammar`。
 > 見第 10 節。Linux 測試過程與真實輸出見 `docs/test-log.md`。
 
-## 1. 檔案
+> Status: tested to pass on Linux (librime 1.10 + librime-octagram).
+> **Tested on Windows 11 + Weasel (小狼毫) 0.17.4 (2026-11-10)**: deployment succeeded, `dhedhkb` → `板橋`, and the log contains `use grammar`.
+> See section 10. The Linux test process and real output are in `docs/test-log.md`.
+
+## 1. 檔案 / 1. Files
 
 | 檔案 | 放哪裡 |
 |---|---|
@@ -16,12 +24,24 @@
 | `cangjie5_fluency.dict.yaml` | `%APPDATA%\Rime\` |
 | `default.custom.yaml` | `%APPDATA%\Rime\`（**已有自己的就不要覆蓋，見第 4 節合併**） |
 
+| File | Where to put it |
+|---|---|
+| `cangjie5_fluency.schema.yaml` | `%APPDATA%\Rime\` |
+| `cangjie5_fluency_v2.schema.yaml` (optional, experimental version, see section 6b) | `%APPDATA%\Rime\` |
+| `cangjie5_fluency.dict.yaml` | `%APPDATA%\Rime\` |
+| `default.custom.yaml` | `%APPDATA%\Rime\` (**if you already have your own, do not overwrite it; see section 4 for merging**) |
+
 `%APPDATA%\Rime` 通常是 `C:\Users\<你>\AppData\Roaming\Rime`（在檔案總管網址列貼上 `%APPDATA%\Rime` 即可）。
 也可以在工具列的小狼毫圖示按右鍵 →「用戶文件夾」直接打開。
 
-## 2. 還需要的三個資料檔
+`%APPDATA%\Rime` is usually `C:\Users\<you>\AppData\Roaming\Rime` (paste `%APPDATA%\Rime` into the File Explorer address bar).
+You can also right-click the Weasel icon in the toolbar and choose "用戶文件夾" (user folder) to open it directly.
+
+## 2. 還需要的三個資料檔 / 2. Three more data files needed
 
 這個方案的詞庫是從「單字全碼表」＋詞彙表 `essay.txt` 自動組出來的，語言模型是八股文 `.gram`。
+
+The dictionary of this schema is assembled automatically from a single-character full-code table plus the vocabulary list `essay.txt`, and the language model is the octagram `.gram` file.
 
 | 檔案 | 大小（實測） | 下載位置 | 放哪裡 |
 |---|---|---|---|
@@ -30,7 +50,14 @@
 | `zh-hant-t-essay-bgw.gram` | 41,415,724 B（約 39.5 MiB） | **已附在本倉庫**：https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/data/zh-hant-t-essay-bgw.gram | `%APPDATA%\Rime\`（安裝腳本自動放並核對 SHA-256） |
 | `grammar.yaml`（選用） | 775 B | https://raw.githubusercontent.com/lotem/rime-octagram-data/master/grammar.yaml | `%APPDATA%\Rime\`；本方案已把同樣設定寫在 schema 內，缺這個檔也能用 |
 
-### 檢查小狼毫是否已內建前兩個檔
+| File | Size (measured) | Download location | Where to put it |
+|---|---|---|---|
+| `cangjie5.base.dict.yaml` | 219,115 B (about 214 KB) | **Included in this repository**: https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/tables/cangjie5.base.dict.yaml | `%APPDATA%\Rime\` (Weasel 0.17.4 does not bundle it; only needed if you install the 5th generation, and the install script places it automatically) |
+| `essay.txt` | 5,887,319 B (about 5.6 MB) | **Included in this repository**: https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/data/essay.txt | Already bundled with Weasel 0.17.4 (`data\essay.txt`); when converting code-table weights the install script always uses this repository's copy, so the result is identical on all three platforms |
+| `zh-hant-t-essay-bgw.gram` | 41,415,724 B (about 39.5 MiB) | **Included in this repository**: https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/data/zh-hant-t-essay-bgw.gram | `%APPDATA%\Rime\` (the install script places it automatically and verifies the SHA-256) |
+| `grammar.yaml` (optional) | 775 B | https://raw.githubusercontent.com/lotem/rime-octagram-data/master/grammar.yaml | `%APPDATA%\Rime\`; this schema already contains the same settings inside the schema, so it works without this file |
+
+### 檢查小狼毫是否已內建前兩個檔 / Check whether Weasel already bundles the first two files
 
 PowerShell：
 
@@ -48,7 +75,15 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 `cangjie5.base.dict.yaml`（只有舊式單檔的 `cangjie5.dict.yaml`、`cangjie5.schema.yaml`、`cangjie5_express.schema.yaml`）。
 0.15.0 也一樣沒有。所以 `cangjie5.base.dict.yaml` 一定要自己下載放進 `%APPDATA%\Rime\`，否則詞庫編不起來。
 
-## 3. 小狼毫有沒有內建 librime-octagram？（語言模型外掛）
+PowerShell (see the command in the code block above; the install path varies by version, commonly `C:\Program Files (x86)\Rime\weasel-<version>\data`, so both locations are searched).
+
+If it is not found (or the size differs a lot), download it from the URLs in the table above and put it in `%APPDATA%\Rime\`.
+
+Basis: Weasel's built-in "preset recipe" (`preset-packages.conf` of rime/plum) includes `cangjie`, `essay`, `prelude`, `luna-pinyin`, `quick` and others, so in theory `data\` should contain `cangjie5.base.dict.yaml` and `essay.txt`.
+
+**Measured (Weasel 0.17.4, 2026-11-10): this inference is only half right.** `data\` contains `essay.txt` but does **not** contain `cangjie5.base.dict.yaml` (only the old single-file `cangjie5.dict.yaml`, `cangjie5.schema.yaml` and `cangjie5_express.schema.yaml`). 0.15.0 does not have it either. So you must download `cangjie5.base.dict.yaml` yourself and put it in `%APPDATA%\Rime\`, otherwise the dictionary cannot be compiled.
+
+## 3. 小狼毫有沒有內建 librime-octagram？（語言模型外掛） / 3. Does Weasel bundle librime-octagram? (language model plugin)
 
 **實測確認（小狼毫 0.17.4，2026-11-10）：有內建。** `rime.dll` 內含 `octagram.cc` 字串，
 切換到「倉頡整句」後日誌出現 `octagram.cc:29] use grammar: zh-hant-t-essay-bgw`。
@@ -68,7 +103,22 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 所以要同時確認「有 `use grammar`」和「**沒有** `failed to load grammar`」才算語言模型真的載入。
 （沒載入時方案仍可用，但等於沒有語言模型。）
 
-## 4. default.custom.yaml 合併方式
+**Confirmed by testing (Weasel 0.17.4, 2026-11-10): yes, it is bundled.** `rime.dll` contains the string `octagram.cc`, and after switching to "倉頡整句" (Cangjie Fluency) the log shows `octagram.cc:29] use grammar: zh-hant-t-essay-bgw`.
+Note: this line does **not** appear during deployment; it is printed only when you actually switch to this schema in some program and start typing (a session is created).
+
+The following is what I found in the source code before testing:
+
+* The Windows release CI of rime/librime (`.github/workflows/release-ci.yml`) adds these plugins when building: `hchunhui/librime-lua lotem/librime-octagram rime/librime-predict`.
+* Weasel's (rime/weasel) `get-rime.ps1` directly downloads the release `rime.dll` of rime/librime and does not pick plugins separately.
+* Latest Weasel releases: `0.17.4.98` (2026-10-31, marked latest, probably a nightly) and the stable `0.17.4` (2025-06-04). I did not check which librime version these two actually contain.
+
+I did not install the installer on Windows to verify whether `rime.dll` really contains octagram. **The most reliable check is to read the log after deployment**:
+the log should contain `octagram.cc:... use grammar: zh-hant-t-essay-bgw`. If this line is missing = the plugin was not loaded.
+**But this line is also printed when the `.gram` file does not exist** (measured on Linux: it is followed by a `failed to load grammar database` line),
+so you must confirm both "`use grammar` is present" and "**no** `failed to load grammar`" for the language model to count as actually loaded.
+(When it is not loaded the schema is still usable, but effectively has no language model.)
+
+## 4. default.custom.yaml 合併方式 / 4. How to merge default.custom.yaml
 
 `default.custom.yaml` 的 `patch: schema_list:` 會**整份取代**預設的方案清單。
 
@@ -77,7 +127,14 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
   `    - schema: cangjie5_fluency`（放第一個 = 預設方案），其餘行保持原樣。
   如果你的檔案裡還沒有 `schema_list`，把本檔 `patch:` 下的整段貼進去。
 
-## 5. 部署與切換
+The `patch: schema_list:` in `default.custom.yaml` **replaces the entire** default schema list.
+
+* If you do not yet have `%APPDATA%\Rime\default.custom.yaml`: simply copy the file from this folder.
+* If you already have one: **do not overwrite it**. Open your own file and add the line
+  `    - schema: cangjie5_fluency` under `schema_list:` (putting it first = default schema), leaving the other lines as they are.
+  If your file has no `schema_list` yet, paste in the whole block under `patch:` from this folder's file.
+
+## 5. 部署與切換 / 5. Deploying and switching
 
 1. 把檔案放好後，在工具列小狼毫圖示按右鍵 → **重新部署**（或開始功能表 →「小狼毫輸入法」→「重新部署」）。
 2. 第一次部署要編譯詞庫（Linux aarch64 約 3.3 秒、產生約 17 MB 的 table；Windows 11 筆電上整個部署約 33 秒，
@@ -86,7 +143,14 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 3. 切換方案：按 `Ctrl` + 反引號鍵（鍵盤左上角 1 左邊那顆）或 `F4` 打開方案選單，選「倉頡整句」。
 4. 改過 yaml 或換了 .gram 都要再「重新部署」一次。
 
-## 6. 打法（跟微軟新倉頡一樣的地方）
+1. After placing the files, right-click the Weasel icon in the toolbar → **重新部署** (Deploy) (or Start menu → "小狼毫輸入法" → "重新部署").
+2. The first deployment compiles the dictionary (about 3.3 seconds on Linux aarch64, producing a table of about 17 MB; on a Windows 11 laptop the whole deployment takes about 33 seconds,
+   `cangjie5_fluency.table.bin` is 17,466,708 B),
+   and a notification such as "部署完成" (deployment complete) appears when it finishes.
+3. To switch schema: press `Ctrl` + the backtick key (the key to the left of 1, at the top left of the keyboard) or `F4` to open the schema menu, and choose "倉頡整句".
+4. After changing any yaml or swapping the .gram, you must deploy again.
+
+## 6. 打法（跟微軟新倉頡一樣的地方） / 6. How to type (where it matches Microsoft New Cangjie)
 
 * 直接一路打字根，不用選字、不用空格：`dhedhkb` → 緩衝區 `板橋`。繼續打會自動重新斷詞修正前面的字。
 * **只有一個字根的字，後面要接空格**（例如「中」= `l`，「中午」打 `l oj`）；其他字碼之間空格可有可無。
@@ -97,7 +161,16 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 * 反查：打 `` ` `` 後輸入拼音（例如 `` `ban `` → 辦 版 半 班 板）。需要 `luna_pinyin` / `luna_quanpin`，小狼毫內建。
 * Shift（左）：切換中／西文，並把緩衝區文字上屏；右 Shift 把緩衝區以英文字母上屏。
 
-## 6b. v1 與 v2 該用哪個？（以下全部只在 Linux librime 1.10 測過，Windows 未測）
+* Just keep typing radicals, with no candidate selection and no space: `dhedhkb` → buffer `板橋`. Continuing to type automatically re-segments and corrects the earlier characters.
+* **A character with only one radical must be followed by a space** (for example "中" = `l`, "中午" is typed `l oj`); between other character codes a space is optional.
+* Space: when the buffer has text, space is simply added to the buffer; pressing space twice = commit and output one space. Enter = commit the whole sentence.
+* `，` `。` `！` `？` (keyboard `,` `.` `!` `?`) commit the whole sentence and append the punctuation.
+* Backspace removes one radical (and re-segments); Esc clears.
+* Characters with the same code (such as 雙/隻, 佑/知) can only be told apart by word frequency; if wrong, use the up/down keys or `PageDown` to change the candidate.
+* Reverse lookup: type `` ` `` then pinyin (for example `` `ban `` → 辦 版 半 班 板). This needs `luna_pinyin` / `luna_quanpin`, which Weasel bundles.
+* Shift (left): toggles Chinese/Western mode and commits the buffer text; right Shift commits the buffer as English letters.
+
+## 6b. v1 與 v2 該用哪個？（以下全部只在 Linux librime 1.10 測過，Windows 未測） / 6b. Which to use, v1 or v2? (everything below was tested only on Linux librime 1.10; untested on Windows)
 
 | 行為 | v1 `cangjie5_fluency`（建議先用） | v2 `cangjie5_fluency_v2`（實驗） |
 |---|---|---|
@@ -112,8 +185,25 @@ Get-ChildItem "C:\Program Files*\Rime","$env:APPDATA\Rime" -Recurse -Include can
 | 數字／符號，緩衝區空 | 進緩衝區（`1` `(` `#` 都不會直達應用程式） | 同 v1 |
 | 句子正確率、斷詞、反查、BackSpace、Return | 與 v2 完全相同（91 句測試結果逐項一致） | 同左 |
 
+| Behavior | v1 `cangjie5_fluency` (recommended first) | v2 `cangjie5_fluency_v2` (experimental) |
+|---|---|---|
+| Space, buffer empty | Commits one space | Space is passed straight to the application (same effect) |
+| Space, buffer has text | Goes into the buffer | Goes into the buffer |
+| Pressing space twice | Commits the whole sentence + a space | **Only confirms the sentence, does not commit it**; you must press Enter again |
+| `, . ? ! :` | Commits the whole sentence + full-width punctuation (immediately) | Full-width punctuation is **appended to the buffer** and is committed together only on Enter; typing `，` with an empty buffer also stays in the buffer |
+| `;` | Becomes the candidate `；` | Treated as a separator (shown as `·`) |
+| Uppercase letter after a code | The uppercase letter and all letters after it stay in the buffer as typed (`板橋Ab`) | The uppercase letter stays as typed, and **lowercase letters after it continue to be treated as Cangjie codes** (`板橋A月`) |
+| Typing `Hello` into an empty buffer | `Hello` stays in the buffer as typed (Enter commits) | `H` stays, `ello` is treated as Cangjie codes (garbage) |
+| `dheAdhkb` | `板Adhkb` (no conversion after the A) | `板A` + Cangjie `dhkb`; the first choice is 「才有」 and `橋` is the second candidate (not `板A橋`) |
+| Digits / symbols, buffer empty | Go into the buffer (`1` `(` `#` never go straight to the application) | Same as v1 |
+| Sentence accuracy, segmentation, reverse lookup, BackSpace, Return | Exactly the same as v2 (the 91-sentence test results match item by item) | Same as left |
+
 v2 修改的設定：`speller/use_space: true`（拿掉 punctuator 的空格）、`half_shape` 標點改成純值、
 `recognizer` 不再 `import_preset: default`（它的 `uppercase` 規則會吞掉大寫之後的按鍵）、
+
+Settings changed in v2: `speller/use_space: true` (removes the punctuator's space), `half_shape` punctuation changed to plain values,
+`recognizer` no longer uses `import_preset: default` (its `uppercase` rule swallows the keys after an uppercase letter),
+and the built-in `abc_segmentor` is used instead.
 改用內建 `abc_segmentor`。
 
 建議：**日常先用 v1**（標點會立刻上屏，較不容易出意外）。v2 是為了更接近「標點留在緩衝區、大寫後可繼續打中文」，
@@ -122,11 +212,21 @@ v2 修改的設定：`speller/use_space: true`（拿掉 punctuator 的空格）�
 標點應該切斷整句上下文。這正是 v1 的行為，所以 v1 是預設建議（見 `docs/xp-behavior-notes.md`，內容是個人回憶，不是微軟文件）。
 v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試過再決定。
 
-## 6c. 三代倉頡版本 cangjie3_fluency（Windows XP 新倉頡的碼表）
+Recommendation: **use v1 for daily typing at first** (punctuation is committed immediately, so there are fewer surprises). v2 aims to get closer to "punctuation stays in the buffer, and you can keep typing Chinese after an uppercase letter",
+but the fact that punctuation must be committed with Enter is a clear behavior change for daily typing, and whether it is closer to Microsoft New Cangjie is **unverified**.
+The author's (a long-time XP New Cangjie user) recollection: in XP, punctuation does stay inside the dotted-line area, but he **does not like** this, because related words often cannot span a comma or period,
+and punctuation should cut the sentence context. This is exactly v1's behavior, so v1 is the default recommendation (see `docs/xp-behavior-notes.md`; its content is personal recollection, not Microsoft documentation).
+v2 did not cause any regression in recognition accuracy, but please try the behavior differences in the table above yourself before deciding.
+
+## 6c. 三代倉頡版本 cangjie3_fluency（Windows XP 新倉頡的碼表） / 6c. Cangjie 3rd generation version cangjie3_fluency (code table of Windows XP New Cangjie)
 
 **為什麼**：Windows XP 內建的「新倉頡」是改良過的**三代**倉頡，本專案預設的 cangjie5_fluency 用五代碼表，
 約兩成的字碼不同（例如「面」三代 `mwyl`、五代 `mwsl`；「作」三代 `ohs`、五代 `oos`；「非」三代 `lmyyy`、五代 `lmsy`）。
 五代對同碼的第二個字會加 X（難）前綴，三代沒有：「知」「佑」三代同碼 `okr`，佑排第一、知是第二個候選。
+
+**Why**: the "New Cangjie" built into Windows XP is an improved **3rd generation** Cangjie, while this project's default cangjie5_fluency uses the 5th generation code table,
+in which about 20% of character codes differ (for example "面" is `mwyl` in the 3rd generation and `mwsl` in the 5th; "作" is `ohs` vs `oos`; "非" is `lmyyy` vs `lmsy`).
+The 5th generation adds an X (難, "hard") prefix to the second character with the same code, which the 3rd generation does not: "知" and "佑" share the code `okr` in the 3rd generation, with 佑 first and 知 as the second candidate.
 
 **安裝**：在 PowerShell 執行
 
@@ -137,16 +237,27 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
 腳本會安裝 `cangjie3_fluency`（引擎行為與 v1 `cangjie5_fluency` 相同，只換碼表），並把它放在
 `default.custom.yaml` 方案清單的**第一個**（已有清單則插入第一項）。
 
+**Install**: run the PowerShell command shown above. The script installs `cangjie3_fluency` (engine behavior is identical to v1 `cangjie5_fluency`, only the code table differs),
+and puts it **first** in the schema list of `default.custom.yaml` (inserted as the first item if a list already exists).
+
 **碼表來源**：`tables/mscj3.cin`（原樣取自 EasyIME/PIME，約 200 KB，來源與雜湊見 `tables/README.md`），**就放在本倉庫**，
 安裝時在你的電腦上轉換成
 `cangjie3.base.dict.yaml`（轉換器 `tools/cin2rime.py`；install.ps1 內有逐位元組相同輸出的 PowerShell 版）。
 轉換時會用 essay.txt 的字頻當權重，同碼字仍維持 .cin 的順序。若沒有 essay.txt，句子正確率會明顯下降
 （Linux 測試，不載入語言模型時：一般 51 句 47/51、困難組 40 句 31/40；有 essay.txt 權重則為 51/51、37/40）。
 
+**Code table source**: `tables/mscj3.cin` (taken as-is from EasyIME/PIME, about 200 KB; source and hash in `tables/README.md`) is **kept in this repository**, and at install time it is converted on your computer into
+`cangjie3.base.dict.yaml` (converter `tools/cin2rime.py`; install.ps1 contains a PowerShell version that produces byte-for-byte identical output).
+During conversion the character frequencies of essay.txt are used as weights, while characters with the same code keep the .cin order. Without essay.txt, sentence accuracy drops noticeably
+(Linux test, without loading the language model: general set of 51 sentences 47/51, hard set of 40 sentences 31/40; with essay.txt weights: 51/51 and 37/40).
+
 **測試狀態**：只在 Linux（librime 1.10）測過；PowerShell 轉換只在 pwsh 7 測過，Windows PowerShell 5.1 與小狼毫實機都沒測。
 詳見 `docs/test-log-cangjie3.md`。三代碼表是否與 Windows XP 新倉頡完全一致**未驗證**（只核對了面、非、作、知／佑）。
 
-## 7. 若部署失敗 / 編譯不過
+**Test status**: tested only on Linux (librime 1.10); the PowerShell conversion was tested only on pwsh 7, and neither Windows PowerShell 5.1 nor Weasel on a real machine was tested.
+See `docs/test-log-cangjie3.md` for details. Whether the 3rd generation code table is fully identical to Windows XP New Cangjie is **unverified** (only 面, 非, 作, 知/佑 were checked).
+
+## 7. 若部署失敗 / 編譯不過 / 7. If deployment fails / compilation fails
 
 1. 看日誌：**小狼毫 0.17.4 放在資料夾 `%TEMP%\rime.weasel\`**（例如
    `%TEMP%\rime.weasel\rime.weasel.<電腦名>.<使用者>.log.INFO.<日期>-<時間>.<pid>.log`）；
@@ -168,7 +279,27 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
 5. 想自訂：新增 `%APPDATA%\Rime\cangjie5_fluency.custom.yaml`，schema 末尾已掛上
    `cangjie5_fluency.custom:/patch?`，不需要改原檔。
 
-## 8. 跟微軟新倉頡仍有的差異（全部 **Windows 上未測**）
+1. Check the log: **Weasel 0.17.4 puts it in the folder `%TEMP%\rime.weasel\`** (for example
+   `%TEMP%\rime.weasel\rime.weasel.<computer name>.<user>.log.INFO.<date>-<time>.<pid>.log`);
+   older versions (tested with 0.15.0) put it directly at `%TEMP%\rime.weasel.*`. Look at the ERROR / WARNING files first, then INFO.
+   A PowerShell one-liner to find the language model lines:
+   `Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern 'use grammar|failed to load grammar' | Select -Last 5`
+   (It counts as loaded only if there is `use grammar` and **no** `failed to load grammar database` after it; when the `.gram` is missing, both lines appear.)
+   * Hundreds of `Encode failure` and `duplicate word definition` lines in the WARNING file are normal (words in essay that are not in the code table are skipped).
+   * `nonexistent config file '...\grammar.yaml'` is also normal (optional file, see section 2).
+2. Common causes:
+   * `missing input file` / `cangjie5.base` not found → the `cangjie5.base.dict.yaml` from section 2 was not placed correctly.
+   * `essay.txt` not found: the dictionary has only single characters and whole-sentence results are very poor → add essay.txt.
+   * The INFO file has no `use grammar: zh-hant-t-essay-bgw` → the `.gram` is not in `%APPDATA%\Rime\`, the file name is wrong,
+     or this Weasel version does not include octagram.
+   * YAML indented with Tabs: always use spaces. Save files as UTF-8 (with or without BOM, but not ANSI/Big5).
+3. Clear the old compiled output and deploy again: close Weasel → delete `%APPDATA%\Rime\build\` → deploy.
+4. To compare with and without the language model: on Linux this is done by not loading the octagram plugin (see `docs/test-log.md`), and the dictionary weights work as usual;
+   on Windows I did not test what happens if you delete the .gram (untested; it may be only a warning, or whole-sentence input may stop working), so back up first and then try.
+5. To customize: add `%APPDATA%\Rime\cangjie5_fluency.custom.yaml`; the end of the schema already hooks in
+   `cangjie5_fluency.custom:/patch?`, so the original files do not need to be edited.
+
+## 8. 跟微軟新倉頡仍有的差異（全部 **Windows 上未測**） / 8. Remaining differences from Microsoft New Cangjie (all **untested on Windows**)
 
 1. **空格鍵**：微軟新倉頡「緩衝區為空時直接輸出空白，否則空白進緩衝區」（依 eight04 的描述，未獨立驗證）。
    v1、v2 皆是：緩衝區有字時空格進緩衝區、空時輸出空白；連按兩次空格 v1 上屏＋空白、v2 只確認。（Linux 測得；Windows 未測）
@@ -185,17 +316,40 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
 6. **使用者詞庫學習**：Rime 會學習你上屏的詞，可能把偶發的錯字學進去，和微軟的行為不同。（未測）
 7. **`fluency_editor` 的行為**：Return 上屏整句、Ctrl+Return 上屏原始字母、Shift+Return 上屏預編碼文字。（Linux 只驗證了 Return）
 
-## 9. 來源與致謝
+1. **Space key**: Microsoft New Cangjie "outputs a space directly when the buffer is empty, otherwise the space goes into the buffer" (per eight04's description, not independently verified).
+   v1 and v2 both: when the buffer has text, space goes into the buffer; when it is empty, a space is output; pressing space twice, v1 commits + a space, v2 only confirms. (Measured on Linux; untested on Windows)
+2. **Uppercase letters**: in v1 the uppercase letter and the letters after it stay in the buffer as typed (`板橋Ab`; the symptom of point 5 of issue #2 remains);
+   in v2 lowercase letters after an uppercase one continue to be converted into Chinese (point 5 is thereby solved), but typing `Hello` into an empty buffer becomes garbage;
+   in both versions an uppercase letter typed into an empty buffer never goes straight to the application. To type English, use Shift to switch. (Measured on Linux; untested on Windows)
+3. **Symbols**: v1 `,` `.` `!` `?` `:` immediately commit the whole sentence + full-width punctuation; v2 appends punctuation to the buffer (the request of point 4 of the issue),
+   but with an empty buffer, symbols/digits never go straight to the application in either version (they stay in the buffer; Enter commits). `-` `=` go into the buffer as typed in both versions.
+   Whether the other half-width symbols all match Microsoft has not been checked one by one. (Measured on Linux; untested on Windows)
+4. **Dictionary differences**: the code table is 《五倉世紀》 (rime-cangjie), not Microsoft New Cangjie's own table; for example "麵" is `jemwl` here
+   ("麪" is `jemls`), and eight04 also reported that characters such as "麵" differ from Microsoft. The order of characters with the same code follows the word frequency of essay.txt, not Microsoft's ordering. (Untested)
+5. **Language model effect**: in a small Linux test (91 sentences), adding the octagram model did not make the final results better (word frequency alone is already sufficient,
+   and for the few same-code conflicts both sides get them wrong); a difference is visible only in the buffer display mid-input. Whether it is pleasant for real daily typing is for you to test.
+6. **User dictionary learning**: Rime learns the words you commit, and may learn occasional wrong characters, which differs from Microsoft's behavior. (Untested)
+7. **Behavior of `fluency_editor`**: Return commits the whole sentence, Ctrl+Return commits the raw letters, Shift+Return commits the pre-edit text. (Only Return was verified on Linux)
+
+## 9. 來源與致謝 / 9. Sources and credits
 
 * 方案設計取自 eight04 在 rime/rime-quick issue #2 提出的 `quick5_fluency`（fluency_editor、不使用
   abc_segmentor、`abc` recognizer pattern、單碼補空格、punctuator 空格處理）。
 * 碼表 rime/rime-cangjie；詞彙 rime/rime-essay；語言模型 lotem/rime-octagram-data（`hant` 分支）。
 
-## 10. Windows 實測紀錄（2026-11-10）
+* The schema design is taken from `quick5_fluency` proposed by eight04 in rime/rime-quick issue #2 (fluency_editor, not using
+  abc_segmentor, the `abc` recognizer pattern, space after single-radical characters, punctuator space handling).
+* Code table: rime/rime-cangjie; vocabulary: rime/rime-essay; language model: lotem/rime-octagram-data (`hant` branch).
+
+## 10. Windows 實測紀錄（2026-11-10） / 10. Windows test record (2026-11-10)
 
 環境：Windows 11 Pro 10.0.26300、小狼毫由 0.15.0 升級到 **0.17.4**（`weasel-0.17.4.0-installer.exe`，
 12,431,118 B，SHA-256 `CF509534A8F5F8AF9C98ED7CBB8F135439F145A8CBE7E50EDE42BB5B5AB45C29`，官方安裝檔本來就沒有數位簽章）、
 Windows Terminal 1.24.2610.1001。只測 v1（`cangjie5_fluency`）。
+
+Environment: Windows 11 Pro 10.0.26300, Weasel upgraded from 0.15.0 to **0.17.4** (`weasel-0.17.4.0-installer.exe`,
+12,431,118 B, SHA-256 `CF509534A8F5F8AF9C98ED7CBB8F135439F145A8CBE7E50EDE42BB5B5AB45C29`, the official installer has never had a digital signature),
+Windows Terminal 1.24.2610.1001. Only v1 (`cangjie5_fluency`) was tested.
 
 | 項目 | 結果 |
 |---|---|
@@ -207,7 +361,17 @@ Windows Terminal 1.24.2610.1001。只測 v1（`cangjie5_fluency`）。
 | octagram | 日誌 `octagram.cc:29] use grammar: zh-hant-t-essay-bgw` ✅ |
 | `dhedhkb` | `板橋` ✅ |
 
-### 升級後 Windows Terminal 閃退（已知原因：升級時 Terminal 還開著）
+| Item | Result |
+|---|---|
+| Is `cangjie5.base.dict.yaml` bundled? | **No**, downloaded myself (219,115 B) |
+| Is `essay.txt` bundled? | Yes (`data\essay.txt`, 6,330,573 B) |
+| `.gram` | Downloaded myself, 41,415,724 B (matches the table above) |
+| `default.custom.yaml` | Merged with the existing file (`cangjie5_fluency` added first), not overwritten |
+| Deployment | `WeaselDeployer.exe /deploy` exit 0, about 33 seconds, no ERROR |
+| octagram | log `octagram.cc:29] use grammar: zh-hant-t-essay-bgw` ✅ |
+| `dhedhkb` | `板橋` ✅ |
+
+### 升級後 Windows Terminal 閃退（已知原因：升級時 Terminal 還開著） / Windows Terminal crashed after the upgrade (known cause: Terminal was still open during the upgrade)
 
 升級後第一次在一個**升級前就開著（已跑 8 天）**的 Windows Terminal 裡切到小狼毫打字，Terminal 立刻閃退。
 重新開一個 Terminal 之後就正常。
@@ -220,3 +384,15 @@ Windows Terminal 1.24.2610.1001。只測 v1（`cangjie5_fluency`）。
   WeaselServer 之間的資料格式版本對不上。
 * 結論：在其他程式還開著（已載入舊版輸入法）的情況下原地升級小狼毫，那些舊程式內的輸入法狀態會和新版
   server 衝突。**升級小狼毫後請登出再登入（或重開機）**，至少要把升級前就開著、用過小狼毫的程式全部重開。
+
+After the upgrade, the first time I switched to Weasel and typed in a Windows Terminal that was **already open before the upgrade (running for 8 days)**, Terminal crashed immediately.
+After opening a new Terminal, everything worked.
+
+* Event Viewer: `WindowsTerminal.exe`, faulting module `ucrtbase.dll`, exception code `0xc0000409` (fail-fast;
+  actually an uncaught C++ exception → `terminate()` → `abort()`).
+* Inspecting `%LOCALAPPDATA%\CrashDumps\WindowsTerminal.exe.<pid>.dmp` with cdb: the exception was thrown by Weasel's
+  TSF module `C:\Windows\System32\weasel.dll` (0.17.4), loaded inside the Terminal process, and is a boost::archive
+  **`unsupported version`**, occurring while deserializing the `weasel::UIStyle` sent by the server, i.e. the data-format versions of the input method front end and
+  WeaselServer do not match.
+* Conclusion: upgrading Weasel in place while other programs are still open (and have loaded the old input method) makes the input method state inside those old programs conflict with the new
+  server. **After upgrading Weasel, log out and back in (or reboot)**; at the very least restart every program that was open and had used Weasel before the upgrade.
