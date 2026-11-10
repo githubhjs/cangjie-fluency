@@ -10,11 +10,14 @@
   Options:  -SkipWeaselInstall  do not try to install Weasel (it must already be installed)
             -NoDeploy           copy files only, do not run WeaselDeployer
             -NoModel            do not download the 41 MB language model (sentence correction is weaker)
-            -WithV2             also install the experimental cangjie5_fluency_v2 schema and list it
-            -Cangjie3           also install the 3rd-generation variant cangjie3_fluency (Windows XP style
-                                new Cangjie table). The table (PIME mscj3.cin, license unknown) is downloaded
-                                from github.com/EasyIME/PIME at install time and converted here; it is not
-                                part of this repository. cangjie3_fluency is listed FIRST in default.custom.yaml.
+            -Cangjie5           also install the 5th-generation schema cangjie5_fluency
+            -NoCangjie3         do NOT install the 3rd-generation schema (then the 5th generation is installed)
+            -WithV2             also install the experimental cangjie5_fluency_v2 schema (implies -Cangjie5)
+            -Cangjie3           accepted for compatibility; the 3rd generation is now installed by default
+
+  DEFAULT = 3rd-generation Cangjie (cangjie3_fluency, the table behind Windows XP's new Cangjie). Its table
+  (PIME mscj3.cin, license unknown) is downloaded from github.com/EasyIME/PIME at install time and converted
+  here; it is not part of this repository. cangjie3_fluency is listed FIRST in default.custom.yaml.
             -DryRun             print what would be done, change nothing
             -Ref <branch|tag>   which version of the schema files to download (default: main)
             -RimeDir <path>     user folder (default: Weasel's RimeUserDir or %APPDATA%\Rime)
@@ -28,6 +31,8 @@ param(
   [switch]$NoModel,
   [switch]$WithV2,
   [switch]$Cangjie3,
+  [switch]$Cangjie5,
+  [switch]$NoCangjie3,
   [switch]$DryRun,
   [string]$Ref = 'main',
   [string]$RimeDir = '',
@@ -49,6 +54,8 @@ $GramUrl     = 'https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-e
 $GramSize    = 41415724
 $Cin3Url     = 'https://raw.githubusercontent.com/EasyIME/PIME/master/python/cinbase/cin/mscj3.cin'
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$do3 = -not $NoCangjie3                                  # 3rd generation is the default
+$do5 = [bool]($Cangjie5 -or $WithV2 -or $NoCangjie3)     # 5th generation only when asked for (or when 3rd is declined)
 $NeedRelogin = $false
 
 function Say($m)  { Write-Host "[cangjie-fluency] $m" }
@@ -210,9 +217,10 @@ if (-not (Test-Path $RimeDir)) { if ($DryRun) { Say "DRY: would create $RimeDir"
 
 # ---------- 3. schema files (local copy next to this script, else download) ----------
 $here = $PSScriptRoot
-$schemaFiles = @('cangjie5_fluency.schema.yaml', 'cangjie5_fluency.dict.yaml')
+$schemaFiles = @()
+if ($do5) { $schemaFiles += @('cangjie5_fluency.schema.yaml', 'cangjie5_fluency.dict.yaml') }
 if ($WithV2) { $schemaFiles += 'cangjie5_fluency_v2.schema.yaml' }
-if ($Cangjie3) { $schemaFiles += @('cangjie3_fluency.schema.yaml', 'cangjie3_fluency.dict.yaml') }
+if ($do3) { $schemaFiles += @('cangjie3_fluency.schema.yaml', 'cangjie3_fluency.dict.yaml') }
 foreach ($f in $schemaFiles) {
   $dest = Join-Path $RimeDir $f
   $local = $null
@@ -228,9 +236,11 @@ foreach ($f in $schemaFiles) {
 }
 
 # ---------- 4. code table, word list, language model ----------
-$base = Join-Path $RimeDir 'cangjie5.base.dict.yaml'
-$haveBase = (Test-Path $base) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'cangjie5.base.dict.yaml')))
-if ($haveBase) { Say 'cangjie5.base.dict.yaml already present.' } else { Get-Remote $BaseDictUrl $base 100000 0 }
+if ($do5) {
+  $base = Join-Path $RimeDir 'cangjie5.base.dict.yaml'
+  $haveBase = (Test-Path $base) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'cangjie5.base.dict.yaml')))
+  if ($haveBase) { Say 'cangjie5.base.dict.yaml already present.' } else { Get-Remote $BaseDictUrl $base 100000 0 }
+}
 
 $essay = Join-Path $RimeDir 'essay.txt'
 $haveEssay = (Test-Path $essay) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'essay.txt')))
@@ -240,7 +250,7 @@ if ($dataDir -and -not (Test-Path (Join-Path $dataDir 'luna_quanpin.schema.yaml'
   Warn 'luna_quanpin.schema.yaml not found in Weasel data; pinyin reverse lookup may fail to compile. Install rime-luna-pinyin or update Weasel.'
 }
 
-if ($Cangjie3) {
+if ($do3) {
   $base3 = Join-Path $RimeDir 'cangjie3.base.dict.yaml'
   if ($DryRun) { Say "DRY: would download $Cin3Url, convert it and install cangjie3.base.dict.yaml" }
   else {
@@ -266,13 +276,37 @@ else { Get-Remote $GramUrl $gram 1000000 $GramSize }
 
 # ---------- 5. default.custom.yaml ----------
 $dc = Join-Path $RimeDir 'default.custom.yaml'
-$ids = @('cangjie5_fluency')
-if ($Cangjie3) { $ids = @('cangjie3_fluency') + $ids }
+$ids = @()
+if ($do3) { $ids += 'cangjie3_fluency' }
+if ($do5) { $ids += 'cangjie5_fluency' }
 if ($WithV2) { $ids += 'cangjie5_fluency_v2' }
-$freshLines = @('# encoding: utf-8', '# created by cangjie-fluency install.ps1', 'patch:', '  schema_list:')
-foreach ($id in $ids) { $freshLines += "    - schema: $id" }
-$freshLines += @('    - schema: cangjie5', '    - schema: luna_pinyin')
+
+# A patched schema_list REPLACES Weasel's stock list, so keep the stock schemas: read them from Weasel's own default.yaml.
+function Get-StockSchemaIds {
+  $out = @()
+  $f = $null
+  if ($dataDir) { $f = Join-Path $dataDir 'default.yaml' }
+  if ($f -and (Test-Path $f)) {
+    $in = $false
+    foreach ($line in [IO.File]::ReadAllLines($f)) {
+      if ($line -match '^schema_list:\s*(#.*)?$') { $in = $true; continue }
+      if ($in) {
+        if ($line -match '^\s*-\s*\{?\s*schema:\s*([A-Za-z0-9_]+)') { $out += $Matches[1]; continue }
+        if ($line -match '^\S' -and $line -notmatch '^\s*#') { break }
+      }
+    }
+  }
+  if ($out.Count -eq 0) { $out = @('cangjie5', 'luna_pinyin') }
+  return $out
+}
+$stock = @(Get-StockSchemaIds | Where-Object { $ids -notcontains $_ })
+$listBody = @()
+foreach ($id in $ids) { $listBody += $id }
+foreach ($id in $stock) { $listBody += $id }
+
 if (-not (Test-Path $dc)) {
+  $freshLines = @('# encoding: utf-8', '# created by cangjie-fluency install.ps1', 'patch:', '  schema_list:')
+  foreach ($id in $listBody) { $freshLines += "    - schema: $id" }
   $freshCrlf = ($freshLines -join "`r`n") + "`r`n"
   if ($DryRun) { Say "DRY: would create $dc" } else { Write-Utf8NoBom $dc $freshCrlf; Say 'created default.custom.yaml' }
 } else {
@@ -310,11 +344,34 @@ if (-not (Test-Path $dc)) {
       if ($DryRun) { Say "DRY: would add $($missing -join ', ') to schema_list in $dc" }
       else { Write-Utf8NoBom $dc (($new -join "`r`n")); Say "added $($missing -join ', ') to the schema_list in your default.custom.yaml" }
     } else {
-      Warn "Your default.custom.yaml has no schema_list, so I did not edit it. Add this under 'patch:' yourself:"
-      Write-Host "  schema_list:"
-      foreach ($id in $ids) { Write-Host "    - schema: $id" }
-      Write-Host "    - schema: cangjie5"
-      Write-Host "    - schema: luna_pinyin"
+      # No schema_list yet (for example the file Weasel's installer leaves behind). Add one under `patch:` with ours first
+      # and Weasel's stock schemas after, so nothing the user had is lost.
+      $block = @('  schema_list:')
+      foreach ($id in $listBody) { $block += "    - schema: $id" }
+      $pi = -1
+      for ($i = 0; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^patch:\s*(#.*)?$|^patch:\s*(\{\s*\}|~|null)\s*(#.*)?$') { $pi = $i; break } }
+      $hasPatchKey = $false
+      foreach ($l in $lines) { if ($l -match '^patch:') { $hasPatchKey = $true; break } }
+      $new = $null
+      if ($pi -ge 0) {
+        $new = @()
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+          if ($i -eq $pi) { $new += 'patch:'; $new += $block } else { $new += $lines[$i] }
+        }
+      } elseif (-not $hasPatchKey) {
+        $new = @($lines | Where-Object { $true })
+        while ($new.Count -gt 0 -and $new[$new.Count - 1].Trim() -eq '') { $new = @($new[0..($new.Count - 2)]) }
+        $new += 'patch:'; $new += $block
+      }
+      if ($new) {
+        Backup-IfExists $dc
+        if ($DryRun) { Say "DRY: would add a schema_list ($($listBody -join ', ')) to $dc" }
+        else { Write-Utf8NoBom $dc (($new -join "`r`n") + "`r`n"); Say "added a schema_list to your default.custom.yaml: $($listBody -join ', ')" }
+      } else {
+        Warn "Your default.custom.yaml has a non-standard 'patch:' (inline mapping), so I did not edit it. Add this under 'patch:' yourself:"
+        Write-Host "  schema_list:"
+        foreach ($id in $listBody) { Write-Host "    - schema: $id" }
+      }
     }
   }
 }
@@ -334,8 +391,13 @@ if ($NoDeploy -or $DryRun -or -not $weasel) {
 # ---------- 7. what next ----------
 Write-Host ''
 Say 'Done. Next steps:'
-Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie5_fluency" (shown as the sentence-style Cangjie).'
-Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code).'
+if ($do3) {
+  Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie3_fluency" (3rd-generation sentence-style Cangjie, listed first).'
+  Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code); mwyl gives the character for "face".'
+} else {
+  Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie5_fluency" (5th-generation sentence-style Cangjie).'
+  Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code).'
+}
 Write-Host '  3. Check the language model loaded (after you typed once with the schema):'
 Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar|failed to load grammar" | Select -Last 5'
 Write-Host '     Loaded = a "use grammar" line and NO "failed to load grammar database" line after it.'

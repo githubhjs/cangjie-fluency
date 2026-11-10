@@ -23,12 +23,24 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 或到 [Releases](https://github.com/githubhjs/cangjie-fluency/releases) 下載壓縮包，解壓縮後雙擊 `install.bat`。
 
 腳本會：安裝小狼毫（用 winget，沒裝才裝）→ 下載缺的碼表與語言模型 → 複製方案 → 保守合併 `default.custom.yaml`（先備份）→ 重新部署。
-裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 切到 `cangjie5_fluency`。可用 `-DryRun` 先看它會做什麼。重複執行是安全的：內容相同的檔案不會重複備份或覆蓋。
-想一起裝實驗性的 v2（排在 v1 後面，不會變成預設）：先下載 `install.ps1` 再執行 `.\install.ps1 -WithV2`。
+**預設安裝三代倉頡 `cangjie3_fluency`**（Windows XP 內建的新倉頡是三代的修改版），並放在方案清單第一個，Weasel 原本的方案接在後面、不會被拿掉。
+裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 或 `F4` 切到 `cangjie3_fluency`。可用 `-DryRun` 先看它會做什麼。重複執行是安全的：內容相同的檔案不會重複備份或覆蓋。
 
-**三代版（更接近 Windows XP 新倉頡）：** XP 內建的是三代倉頡的修改版，預設的 `cangjie5_fluency` 用五代碼表，約兩成的字碼不同。
-執行 `.\install.ps1 -Cangjie3` 會另外安裝 `cangjie3_fluency` 並放在方案清單第一個。三代碼表（PIME 的 `mscj3.cin`）
-**不在本倉庫裡**（檔案沒有授權說明），安裝時由腳本從 PIME 下載並轉換。詳見 `weasel/README.zh-TW.md` 第 6c 節。
+要加參數時，`irm | iex` 傳不了參數，用這個寫法（等於下載後執行）：
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1))) -Cangjie5
+```
+
+| 參數 | 作用 |
+|---|---|
+| （不加） | 三代 `cangjie3_fluency` |
+| `-Cangjie5` | 另外裝五代 `cangjie5_fluency` |
+| `-NoCangjie3` | 不裝三代，改裝五代（舊版的預設行為） |
+| `-WithV2` | 再加實驗性的 v2（排在 v1 後面，不會變成預設；會一併裝五代） |
+| `-NoModel` / `-DryRun` / `-NoDeploy` | 不下載語言模型／只顯示不做／只複製檔案不部署 |
+
+三代碼表（PIME 的 `mscj3.cin`）**不在本倉庫裡**（檔案沒有授權說明），安裝時由腳本從 PIME 下載並轉換。五代碼表約兩成的字碼與三代不同，詳見 `weasel/README.zh-TW.md` 第 6c 節。
 
 進階：也可以用東風破（[plum](https://github.com/rime/plum)）`rime-install githubhjs/cangjie-fluency`（Windows 需要 plum 的 bootstrap 包，內含 git、7z）。
 **但只適合從沒自訂過方案清單的人，其他人請用上面的一行安裝：**
