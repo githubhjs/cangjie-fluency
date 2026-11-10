@@ -18,6 +18,7 @@
   DEFAULT = 3rd-generation Cangjie (cangjie3_fluency, the table behind Windows XP's new Cangjie). Its table
   (mscj3.cin, kept unchanged in this repository under tables/, SHA-256 checked) is converted here into
   cangjie3.base.dict.yaml. cangjie3_fluency is listed FIRST in default.custom.yaml.
+            -Offline            never use the network: everything must be next to this script (full release zip)
             -DryRun             print what would be done, change nothing
             -Ref <branch|tag>   which version of the schema files to download (default: main)
             -RimeDir <path>     user folder (default: Weasel's RimeUserDir or %APPDATA%\Rime)
@@ -33,6 +34,7 @@ param(
   [switch]$Cangjie3,
   [switch]$Cangjie5,
   [switch]$NoCangjie3,
+  [switch]$Offline,
   [switch]$DryRun,
   [string]$Ref = 'main',
   [string]$RimeDir = '',
@@ -48,13 +50,20 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::
 
 $Repo     = 'githubhjs/cangjie-fluency'
 $SchemaRaw = "https://raw.githubusercontent.com/$Repo/$Ref/weasel"
-$BaseDictUrl = 'https://raw.githubusercontent.com/rime/rime-cangjie/master/cangjie5.base.dict.yaml'
-$EssayUrl    = 'https://raw.githubusercontent.com/rime/rime-essay/master/essay.txt'
-$GramUrl     = 'https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-essay-bgw.gram'
+$RepoRaw = "https://raw.githubusercontent.com/$Repo/$Ref"
+$DepsUrl = "https://github.com/$Repo/releases/download/deps-v1"
+$here = $PSScriptRoot
+$WeaselInstaller = 'weasel-0.17.4.0-installer.exe'
+$WeaselSha   = 'cf509534a8f5f8af9c98ed7cbb8f135439f145a8cbe7e50ede42bb5b5ab45c29'
+$BaseDictUrl = "$RepoRaw/tables/cangjie5.base.dict.yaml"
+$BaseDictSha = '0b7a801720bbf04cea06c55577c159e2e67b9bbb763bf00026a8520497772799'
+$EssayUrl    = "$RepoRaw/data/essay.txt"
+$EssaySha    = '3e8512ebaa6657e35961b1f5762060717c647e3bf471d5e3b86e783b4e934ffb'
+$GramUrl     = "$RepoRaw/data/zh-hant-t-essay-bgw.gram"
+$GramSha     = '0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1'
 $GramSize    = 41415724
-$Cin3Url      = "https://raw.githubusercontent.com/githubhjs/cangjie-fluency/$Ref/tables/mscj3.cin"
-$Cin3Fallback = 'https://raw.githubusercontent.com/EasyIME/PIME/e6e4529ed69dea11171365054b8134f5866fe33f/python/cinbase/cin/mscj3.cin'
-$Cin3Sha256   = 'a7b3d03898dc0b2b0bd7803ad0be7b940a1ed945ac5d6314ed832b1dbf6839a2'
+$Cin3Url     = "$RepoRaw/tables/mscj3.cin"
+$Cin3Sha256  = 'a7b3d03898dc0b2b0bd7803ad0be7b940a1ed945ac5d6314ed832b1dbf6839a2'
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $do3 = -not $NoCangjie3                                  # 3rd generation is the default
 $do5 = [bool]($Cangjie5 -or $WithV2 -or $NoCangjie3)     # 5th generation only when asked for (or when 3rd is declined)
@@ -172,6 +181,31 @@ function Get-Remote($url, $dest, $minBytes, $exactBytes) {
   Place-File $tmp $dest
 }
 
+# Find a file shipped next to this script (full release zip layout: data\, tables\, weasel\, deps\) or flat next to it.
+function Find-Local($rel) {
+  if (-not $here) { return $null }
+  $leaf = Split-Path $rel -Leaf
+  foreach ($c in @((Join-Path $here $rel), (Join-Path $here $leaf))) { if (Test-Path $c) { return $c } }
+  return $null
+}
+
+# Put a verified copy of a file in a temp path: local bundle first, else this repository (never a third party).
+function Get-Staged($rel, $url, $sha, $minBytes) {
+  $leaf = Split-Path $rel -Leaf
+  $tmp = Join-Path ([IO.Path]::GetTempPath()) ("cjf-$Stamp-$leaf")
+  $src = Find-Local $rel
+  if ($src) { Copy-Item $src $tmp -Force; Say "using $src" }
+  elseif ($Offline) { Fail "$leaf is not next to this script and -Offline was given" }
+  else { Say "downloading $url"; Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing }
+  $len = (Get-Item $tmp).Length
+  if ($len -lt $minBytes) { Remove-Item $tmp -Force; Fail "$leaf is only $len bytes, the download looks wrong" }
+  if ($sha) {
+    $got = ((Get-Sha256 $tmp) -replace '-', '').ToLower()
+    if ($got -ne $sha) { Remove-Item $tmp -Force; Fail "$leaf SHA-256 is $got, expected $sha" }
+  }
+  return $tmp
+}
+
 function Find-Weasel {
   if ($WeaselDir -ne '') { if (Test-Path (Join-Path $WeaselDir 'WeaselDeployer.exe')) { return $WeaselDir } else { return $null } }
   $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}) | Where-Object { $_ }
@@ -190,16 +224,30 @@ function Find-Weasel {
 # ---------- 1. Weasel ----------
 $weasel = Find-Weasel
 if (-not $weasel) {
-  if ($SkipWeaselInstall) { Fail 'Weasel is not installed (WeaselDeployer.exe not found). Install it from https://github.com/rime/weasel/releases and run this again.' }
-  $winget = Get-Command winget -ErrorAction SilentlyContinue
-  if ($DryRun) { Say 'DRY: Weasel not found; would run: winget install --id Rime.Weasel -e' }
-  elseif ($winget) {
-    Say 'Weasel not found. Installing with winget (a UAC prompt will appear; accept it)...'
-    & winget install --id Rime.Weasel -e --accept-package-agreements --accept-source-agreements
-    $weasel = Find-Weasel
-    if (-not $weasel) { Fail 'winget finished but Weasel was not found. Install it manually from https://github.com/rime/weasel/releases then run this script again.' }
-  } else {
-    Fail 'Weasel is not installed and winget is not available. Download weasel-*-installer.exe from https://github.com/rime/weasel/releases, run it (admin), then run this script again.'
+  if ($SkipWeaselInstall) { Fail 'Weasel is not installed (WeaselDeployer.exe not found). Run the installer that ships with this project (deps-v1 release) and run this again.' }
+  if ($DryRun) { Say "DRY: Weasel not found; would install $WeaselInstaller (bundled or from $DepsUrl)" }
+  else {
+    $inst = $null
+    try { $inst = Get-Staged ("deps\" + $WeaselInstaller) ("$DepsUrl/$WeaselInstaller") $WeaselSha 5000000 } catch { Warn "Weasel installer from this project not available: $($_.Exception.Message)" }
+    if ($inst) {
+      Say 'Installing Weasel 0.17.4 from the project copy (a UAC prompt will appear; accept it)...'
+      try {
+        $psi = New-Object Diagnostics.ProcessStartInfo
+        $psi.FileName = $inst; $psi.Arguments = '/S'; $psi.UseShellExecute = $true; $psi.Verb = 'runas'
+        $pr = [Diagnostics.Process]::Start($psi); $pr.WaitForExit()
+      } catch { Warn "Weasel installer did not run: $($_.Exception.Message)" }
+      Remove-Item $inst -Force -ErrorAction SilentlyContinue
+      $weasel = Find-Weasel
+    }
+    if (-not $weasel -and -not $Offline) {
+      $winget = Get-Command winget -ErrorAction SilentlyContinue
+      if ($winget) {
+        Say 'Falling back to winget (a UAC prompt will appear; accept it)...'
+        & winget install --id Rime.Weasel -e --accept-package-agreements --accept-source-agreements
+        $weasel = Find-Weasel
+      }
+    }
+    if (-not $weasel) { Fail 'Weasel could not be installed. Install weasel-0.17.4.0-installer.exe from the deps-v1 release of this project (run it as administrator), then run this script again.' }
   }
 }
 if ($weasel) { Say "Weasel found: $weasel" } else { Say 'DRY: continuing without a Weasel folder.' }
@@ -231,61 +279,52 @@ foreach ($f in $schemaFiles) {
     if ($DryRun) { Say "DRY: would copy $local -> $dest" }
     else { $tmp = "$dest.part"; Copy-Item $local $tmp -Force; Place-File $tmp $dest }
   } else {
+    if ($Offline) { Fail "$f is not next to this script and -Offline was given" }
     Get-Remote "$SchemaRaw/$f" $dest 500 0
   }
 }
 
-# ---------- 4. code table, word list, language model ----------
+# ---------- 4. code table, word list, language model (all from this repository) ----------
 if ($do5) {
   $base = Join-Path $RimeDir 'cangjie5.base.dict.yaml'
   $haveBase = (Test-Path $base) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'cangjie5.base.dict.yaml')))
-  if ($haveBase) { Say 'cangjie5.base.dict.yaml already present.' } else { Get-Remote $BaseDictUrl $base 100000 0 }
+  if ($haveBase) { Say 'cangjie5.base.dict.yaml already present.' }
+  elseif ($DryRun) { Say "DRY: would install tables\cangjie5.base.dict.yaml from this project" }
+  else { $t5 = Get-Staged 'tables\cangjie5.base.dict.yaml' $BaseDictUrl $BaseDictSha 100000; Place-File $t5 $base }
 }
 
+# essay.txt: the project's pinned copy is always used for the table weights (same table on every platform);
+# it is installed into the user folder only when Weasel has none.
 $essay = Join-Path $RimeDir 'essay.txt'
+$essayPinned = $null
+if (-not $DryRun) { $essayPinned = Get-Staged 'data\essay.txt' $EssayUrl $EssaySha 1000000 }
 $haveEssay = (Test-Path $essay) -or ($dataDir -and (Test-Path (Join-Path $dataDir 'essay.txt')))
-if ($haveEssay) { Say 'essay.txt already present.' } else { Get-Remote $EssayUrl $essay 1000000 0 }
+if ($haveEssay) { Say 'essay.txt already present in Weasel or the user folder.' }
+elseif ($DryRun) { Say 'DRY: would install data\essay.txt from this project' }
+else { Copy-Item $essayPinned "$essay.part" -Force; Place-File "$essay.part" $essay }
 
 if ($dataDir -and -not (Test-Path (Join-Path $dataDir 'luna_quanpin.schema.yaml')) -and -not (Test-Path (Join-Path $RimeDir 'luna_quanpin.schema.yaml'))) {
-  Warn 'luna_quanpin.schema.yaml not found in Weasel data; pinyin reverse lookup may fail to compile. Install rime-luna-pinyin or update Weasel.'
+  Warn 'luna_quanpin.schema.yaml not found in Weasel data; pinyin reverse lookup may fail to compile. Update Weasel.'
 }
 
 if ($do3) {
   $base3 = Join-Path $RimeDir 'cangjie3.base.dict.yaml'
-  if ($DryRun) { Say "DRY: would download $Cin3Url, convert it and install cangjie3.base.dict.yaml" }
+  if ($DryRun) { Say "DRY: would convert tables\mscj3.cin from this project and install cangjie3.base.dict.yaml" }
   else {
-    $cinTmp = Join-Path ([IO.Path]::GetTempPath()) ('mscj3-' + $Stamp + '.cin')
-    $localCin = $null
-    if ($here) {
-      foreach ($c in @((Join-Path (Join-Path $here 'tables') 'mscj3.cin'), (Join-Path $here 'mscj3.cin'))) { if (Test-Path $c) { $localCin = $c; break } }
-    }
-    if ($localCin) { Copy-Item $localCin $cinTmp -Force; Say "using $localCin" }
-    else {
-      Say "downloading $Cin3Url"
-      try { Invoke-WebRequest -Uri $Cin3Url -OutFile $cinTmp -UseBasicParsing }
-      catch {
-        Warn "repo copy not available ($($_.Exception.Message)); using the pinned PIME copy instead"
-        Invoke-WebRequest -Uri $Cin3Fallback -OutFile $cinTmp -UseBasicParsing
-      }
-    }
-    $cinLen = (Get-Item $cinTmp).Length
-    if ($cinLen -lt 100000) { Remove-Item $cinTmp -Force; Fail "mscj3.cin is only $cinLen bytes, the download looks wrong" }
-    $cinSha = ((Get-Sha256 $cinTmp) -replace '-', '').ToLower()
-    if ($cinSha -ne $Cin3Sha256) { Remove-Item $cinTmp -Force; Fail "mscj3.cin SHA-256 is $cinSha, expected $Cin3Sha256" }
+    $cinTmp = Get-Staged 'tables\mscj3.cin' $Cin3Url $Cin3Sha256 100000
     $tmp3 = "$base3.part"
-    $essayFor3 = $null
-    if (Test-Path $essay) { $essayFor3 = $essay } elseif ($dataDir -and (Test-Path (Join-Path $dataDir 'essay.txt'))) { $essayFor3 = Join-Path $dataDir 'essay.txt' }
-    if (-not $essayFor3) { Warn 'essay.txt not found; cangjie3 weights fall back to .cin order only (weaker sentence correction).' }
-    Convert-CinToRime $cinTmp $tmp3 $essayFor3
+    Convert-CinToRime $cinTmp $tmp3 $essayPinned
     Remove-Item $cinTmp -Force
     Place-File $tmp3 $base3
   }
 }
+if ($essayPinned) { Remove-Item $essayPinned -Force -ErrorAction SilentlyContinue }
 
 $gram = Join-Path $RimeDir 'zh-hant-t-essay-bgw.gram'
 if ($NoModel) { Say 'skipping language model (-NoModel).' }
-elseif ((Test-Path $gram) -and ((Get-Item $gram).Length -eq $GramSize)) { Say 'language model already present.' }
-else { Get-Remote $GramUrl $gram 1000000 $GramSize }
+elseif ((Test-Path $gram) -and ((Get-Item $gram).Length -eq $GramSize) -and ((((Get-Sha256 $gram) -replace '-', '').ToLower()) -eq $GramSha)) { Say 'language model already present.' }
+elseif ($DryRun) { Say 'DRY: would install data\zh-hant-t-essay-bgw.gram from this project' }
+else { $tg = Get-Staged 'data\zh-hant-t-essay-bgw.gram' $GramUrl $GramSha $GramSize; Place-File $tg $gram }
 
 # ---------- 5. default.custom.yaml ----------
 $dc = Join-Path $RimeDir 'default.custom.yaml'
