@@ -25,9 +25,9 @@
 
 | 檔案 | 大小（實測） | 下載位置 | 放哪裡 |
 |---|---|---|---|
-| `cangjie5.base.dict.yaml` | 219,115 B（約 214 KB） | https://raw.githubusercontent.com/rime/rime-cangjie/master/cangjie5.base.dict.yaml | `%APPDATA%\Rime\`（**小狼毫 0.17.4 不內建，必須自己下載**，見下） |
-| `essay.txt` | 5,887,319 B（約 5.6 MB） | https://raw.githubusercontent.com/rime/rime-essay/master/essay.txt | 小狼毫 0.17.4 已內建（`data\essay.txt`，6,330,573 B，版本不同但可用） |
-| `zh-hant-t-essay-bgw.gram` | 41,415,724 B（約 39.5 MiB） | https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-essay-bgw.gram（注意是 **hant 分支**） | `%APPDATA%\Rime\`（**小狼毫不內建，必須自己下載**；不要 commit 進 git，已列入 `.gitignore`） |
+| `cangjie5.base.dict.yaml` | 219,115 B（約 214 KB） | **已附在本倉庫**：https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/tables/cangjie5.base.dict.yaml | `%APPDATA%\Rime\`（小狼毫 0.17.4 不內建；只有裝五代才需要，安裝腳本會自動放） |
+| `essay.txt` | 5,887,319 B（約 5.6 MB） | **已附在本倉庫**：https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/data/essay.txt | 小狼毫 0.17.4 已內建（`data\essay.txt`），安裝腳本轉換碼表權重時一律用本倉庫這份，結果在三個平台相同 |
+| `zh-hant-t-essay-bgw.gram` | 41,415,724 B（約 39.5 MiB） | **已附在本倉庫**：https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/data/zh-hant-t-essay-bgw.gram | `%APPDATA%\Rime\`（安裝腳本自動放並核對 SHA-256） |
 | `grammar.yaml`（選用） | 775 B | https://raw.githubusercontent.com/lotem/rime-octagram-data/master/grammar.yaml | `%APPDATA%\Rime\`；本方案已把同樣設定寫在 schema 內，缺這個檔也能用 |
 
 ### 檢查小狼毫是否已內建前兩個檔
@@ -137,9 +137,8 @@ v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試�
 腳本會安裝 `cangjie3_fluency`（引擎行為與 v1 `cangjie5_fluency` 相同，只換碼表），並把它放在
 `default.custom.yaml` 方案清單的**第一個**（已有清單則插入第一項）。
 
-**碼表來源**：PIME 專案的 `mscj3.cin`
-（https://raw.githubusercontent.com/EasyIME/PIME/master/python/cinbase/cin/mscj3.cin，約 200 KB）。
-這個檔案**沒有授權聲明，所以不在本專案內**：安裝時才從 PIME 下載，在你的電腦上轉換成
+**碼表來源**：`tables/mscj3.cin`（原樣取自 EasyIME/PIME，約 200 KB，來源與雜湊見 `tables/README.md`），**就放在本倉庫**，
+安裝時在你的電腦上轉換成
 `cangjie3.base.dict.yaml`（轉換器 `tools/cin2rime.py`；install.ps1 內有逐位元組相同輸出的 PowerShell 版）。
 轉換時會用 essay.txt 的字頻當權重，同碼字仍維持 .cin 的順序。若沒有 essay.txt，句子正確率會明顯下降
 （Linux 測試，不載入語言模型時：一般 51 句 47/51、困難組 40 句 31/40；有 essay.txt 權重則為 51/51、37/40）。

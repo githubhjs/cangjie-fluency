@@ -24,7 +24,7 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 
 腳本會：安裝小狼毫（用 winget，沒裝才裝）→ 下載缺的碼表與語言模型 → 複製方案 → 保守合併 `default.custom.yaml`（先備份）→ 重新部署。
 **預設安裝三代倉頡 `cangjie3_fluency`**（Windows XP 內建的新倉頡是三代的修改版），並放在方案清單第一個，Weasel 原本的方案接在後面、不會被拿掉。
-裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 或 `F4` 切到 `cangjie3_fluency`。可用 `-DryRun` 先看它會做什麼。重複執行是安全的：內容相同的檔案不會重複備份或覆蓋。
+裝完按 `Ctrl+`` 或 `F4` 切到 `cangjie3_fluency`。可用 `-DryRun` 先看它會做什麼。重複執行是安全的：內容相同的檔案不會重複備份或覆蓋。
 
 要加參數時，`irm | iex` 傳不了參數，用這個寫法（等於下載後執行）：
 
@@ -40,7 +40,7 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 | `-WithV2` | 再加實驗性的 v2（排在 v1 後面，不會變成預設；會一併裝五代） |
 | `-NoModel` / `-DryRun` / `-NoDeploy` | 不下載語言模型／只顯示不做／只複製檔案不部署 |
 
-三代碼表（PIME 的 `mscj3.cin`）**不在本倉庫裡**（檔案沒有授權說明），安裝時由腳本從 PIME 下載並轉換。五代碼表約兩成的字碼與三代不同，詳見 `weasel/README.zh-TW.md` 第 6c 節。
+三代碼表 `tables/mscj3.cin` 就放在本倉庫（來源、雜湊與使用說明見 `tables/README.md`），安裝時在你的電腦上轉換成 Rime 格式；語言模型與詞表也都在本倉庫（`data/`）。**安裝時只從本倉庫取檔，不需要連到任何第三方**（小狼毫本身除外，見下）。五代碼表約兩成的字碼與三代不同，詳見 `weasel/README.zh-TW.md` 第 6c 節。
 
 進階：也可以用東風破（[plum](https://github.com/rime/plum)）`rime-install githubhjs/cangjie-fluency`（Windows 需要 plum 的 bootstrap 包，內含 git、7z）。
 **但只適合從沒自訂過方案清單的人，其他人請用上面的一行安裝：**
@@ -52,10 +52,10 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 
 ## 狀態 / Status
 
-- Linux（librime 1.10 + librime-octagram）與 **Windows 11 + 小狼毫 0.17.4**（只測 v1，部署成功、`dhedhkb` → `板橋`）都測過；v2 尚未在 Windows 測。建議日常用 v1，理由見 `docs/xp-behavior-notes.md`。
-- 語言模型在我們的測試句上效果很小（51 句日常句 51/51 有無模型相同）；詳見 `weasel/docs/test-log.md`。
+- 已測：**Windows 11 + 小狼毫 0.17.4**（v1、v2 都測過；三代版部署成功）、**macOS 26 + 鼠鬚管 1.1.2**（本人實際打字確認）、Linux（librime 1.10 + librime-octagram；ibus-rime 經 IBus API 實機測 10/10）。建議日常用 v1（預設是三代 `cangjie3_fluency`），理由見 `docs/xp-behavior-notes.md`。
+- 語言模型：我們的測試句（51 句日常句、40 句同碼難句、91 句整句、34 個同碼字詞組如「手感／手怠」「頻率／顏率」）有無模型的結果幾乎相同，因為這些詞在詞表 `essay.txt` 已有詞頻；我們還沒找到能量出模型差異的案例（數字見 `weasel/docs/test-log.md`）。
 - 單字碼要接空白（例如「中午」打 `l oj`）。
-- 語言模型檔 `zh-hant-t-essay-bgw.gram`（約 39.5 MB）不在本倉庫，下載方式見 `weasel/README.zh-TW.md`。
+- 語言模型檔 `data/zh-hant-t-essay-bgw.gram`（41,415,724 B）**已附在本倉庫**，安裝腳本直接從這裡取得並核對 SHA-256。
 
 ## 來源與授權 / Credits and license
 

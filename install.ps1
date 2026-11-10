@@ -16,8 +16,8 @@
             -Cangjie3           accepted for compatibility; the 3rd generation is now installed by default
 
   DEFAULT = 3rd-generation Cangjie (cangjie3_fluency, the table behind Windows XP's new Cangjie). Its table
-  (PIME mscj3.cin, license unknown) is downloaded from github.com/EasyIME/PIME at install time and converted
-  here; it is not part of this repository. cangjie3_fluency is listed FIRST in default.custom.yaml.
+  (mscj3.cin, kept unchanged in this repository under tables/, SHA-256 checked) is converted here into
+  cangjie3.base.dict.yaml. cangjie3_fluency is listed FIRST in default.custom.yaml.
             -DryRun             print what would be done, change nothing
             -Ref <branch|tag>   which version of the schema files to download (default: main)
             -RimeDir <path>     user folder (default: Weasel's RimeUserDir or %APPDATA%\Rime)
@@ -52,11 +52,12 @@ $BaseDictUrl = 'https://raw.githubusercontent.com/rime/rime-cangjie/master/cangj
 $EssayUrl    = 'https://raw.githubusercontent.com/rime/rime-essay/master/essay.txt'
 $GramUrl     = 'https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-essay-bgw.gram'
 $GramSize    = 41415724
-$Cin3Url     = 'https://raw.githubusercontent.com/EasyIME/PIME/master/python/cinbase/cin/mscj3.cin'
+$Cin3Url      = "https://raw.githubusercontent.com/githubhjs/cangjie-fluency/$Ref/tables/mscj3.cin"
+$Cin3Fallback = 'https://raw.githubusercontent.com/EasyIME/PIME/e6e4529ed69dea11171365054b8134f5866fe33f/python/cinbase/cin/mscj3.cin'
+$Cin3Sha256   = 'a7b3d03898dc0b2b0bd7803ad0be7b940a1ed945ac5d6314ed832b1dbf6839a2'
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $do3 = -not $NoCangjie3                                  # 3rd generation is the default
 $do5 = [bool]($Cangjie5 -or $WithV2 -or $NoCangjie3)     # 5th generation only when asked for (or when 3rd is declined)
-$NeedRelogin = $false
 
 function Say($m)  { Write-Host "[cangjie-fluency] $m" }
 function Warn($m) { Write-Host "[cangjie-fluency] WARNING: $m" -ForegroundColor Yellow }
@@ -196,7 +197,6 @@ if (-not $weasel) {
     Say 'Weasel not found. Installing with winget (a UAC prompt will appear; accept it)...'
     & winget install --id Rime.Weasel -e --accept-package-agreements --accept-source-agreements
     $weasel = Find-Weasel
-    $NeedRelogin = $true
     if (-not $weasel) { Fail 'winget finished but Weasel was not found. Install it manually from https://github.com/rime/weasel/releases then run this script again.' }
   } else {
     Fail 'Weasel is not installed and winget is not available. Download weasel-*-installer.exe from https://github.com/rime/weasel/releases, run it (admin), then run this script again.'
@@ -255,10 +255,23 @@ if ($do3) {
   if ($DryRun) { Say "DRY: would download $Cin3Url, convert it and install cangjie3.base.dict.yaml" }
   else {
     $cinTmp = Join-Path ([IO.Path]::GetTempPath()) ('mscj3-' + $Stamp + '.cin')
-    Say "downloading $Cin3Url"
-    Invoke-WebRequest -Uri $Cin3Url -OutFile $cinTmp -UseBasicParsing
+    $localCin = $null
+    if ($here) {
+      foreach ($c in @((Join-Path (Join-Path $here 'tables') 'mscj3.cin'), (Join-Path $here 'mscj3.cin'))) { if (Test-Path $c) { $localCin = $c; break } }
+    }
+    if ($localCin) { Copy-Item $localCin $cinTmp -Force; Say "using $localCin" }
+    else {
+      Say "downloading $Cin3Url"
+      try { Invoke-WebRequest -Uri $Cin3Url -OutFile $cinTmp -UseBasicParsing }
+      catch {
+        Warn "repo copy not available ($($_.Exception.Message)); using the pinned PIME copy instead"
+        Invoke-WebRequest -Uri $Cin3Fallback -OutFile $cinTmp -UseBasicParsing
+      }
+    }
     $cinLen = (Get-Item $cinTmp).Length
     if ($cinLen -lt 100000) { Remove-Item $cinTmp -Force; Fail "mscj3.cin is only $cinLen bytes, the download looks wrong" }
+    $cinSha = ((Get-Sha256 $cinTmp) -replace '-', '').ToLower()
+    if ($cinSha -ne $Cin3Sha256) { Remove-Item $cinTmp -Force; Fail "mscj3.cin SHA-256 is $cinSha, expected $Cin3Sha256" }
     $tmp3 = "$base3.part"
     $essayFor3 = $null
     if (Test-Path $essay) { $essayFor3 = $essay } elseif ($dataDir -and (Test-Path (Join-Path $dataDir 'essay.txt'))) { $essayFor3 = Join-Path $dataDir 'essay.txt' }
@@ -360,7 +373,10 @@ if (-not (Test-Path $dc)) {
         }
       } elseif (-not $hasPatchKey) {
         $new = @($lines | Where-Object { $true })
-        while ($new.Count -gt 0 -and $new[$new.Count - 1].Trim() -eq '') { $new = @($new[0..($new.Count - 2)]) }
+        # drop trailing blank lines (an empty or blank-only file must end up empty; note 0..-1 in PowerShell is the two-element range 0,-1)
+        $keep = $new.Count
+        while ($keep -gt 0 -and $new[$keep - 1].Trim() -eq '') { $keep-- }
+        if ($keep -gt 0) { $new = @($new[0..($keep - 1)]) } else { $new = @() }
         $new += 'patch:'; $new += $block
       }
       if ($new) {
@@ -402,7 +418,6 @@ Write-Host '  3. Check the language model loaded (after you typed once with the 
 Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar|failed to load grammar" | Select -Last 5'
 Write-Host '     Loaded = a "use grammar" line and NO "failed to load grammar database" line after it.'
 Write-Host '     (The "use grammar" line is also printed when the .gram file is missing; the failure line is what tells them apart.)'
-if ($NeedRelogin) { Warn 'Weasel was just installed or upgraded: sign out and sign in again (or restart) before typing, otherwise apps that were already open can crash on first use.' }
 } } catch {
   Write-Host "[cangjie-fluency] ERROR: $($_.Exception.Message)" -ForegroundColor Red
   Write-Host '[cangjie-fluency] Stopped. Files written before this point are kept (existing ones were backed up as *.bak-<time>).' -ForegroundColor Red
