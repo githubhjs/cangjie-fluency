@@ -69,6 +69,7 @@ $do3 = -not $NoCangjie3                                  # 3rd generation is the
 $do5 = [bool]($Cangjie5 -or $WithV2 -or $NoCangjie3)     # 5th generation only when asked for (or when 3rd is declined)
 
 function Say($m)  { Write-Host "[cangjie-fluency] $m" }
+function Zh($m) { Write-Host ('                  ' + [regex]::Unescape($m)) }
 function Warn($m) { Write-Host "[cangjie-fluency] WARNING: $m" -ForegroundColor Yellow }
 function Fail($m) { throw $m }   # caught at the bottom; never use exit (it would close the user's PowerShell under iex)
 
@@ -446,14 +447,20 @@ if ($NoDeploy -or $DryRun -or -not $weasel) {
 # ---------- 7. what next ----------
 Write-Host ''
 Say 'Done. Next steps:'
+Zh '\u5b8c\u6210\u3002\u63a5\u4e0b\u4f86\uff1a'
 if ($do3) {
   Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie3_fluency" (3rd-generation sentence-style Cangjie, listed first).'
+  Write-Host ('    ' + [regex]::Unescape('\u5728\u4efb\u4f55\u8f38\u5165\u6846\u6309 Ctrl+`\uff08\u6216 F4\uff09\uff0c\u9078\u300ccangjie3_fluency\u300d\uff08\u5009\u9821\u4e09\u4ee3\u6574\u53e5\u7248\uff0c\u6392\u5728\u6700\u524d\u9762\uff09\u3002'))
   Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code); mwyl gives the character for "face".'
+  Write-Host ('    ' + [regex]::Unescape('\u8f38\u5165 dhedhkb \u6703\u8b8a\u6210\u300c\u677f\u6a4b\u300d\uff1b\u8f38\u5165 mwyl \u6703\u51fa\u73fe\u300c\u9762\u300d\u3002'))
 } else {
   Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie5_fluency" (5th-generation sentence-style Cangjie).'
+  Write-Host ('    ' + [regex]::Unescape('\u5728\u4efb\u4f55\u8f38\u5165\u6846\u6309 Ctrl+`\uff08\u6216 F4\uff09\uff0c\u9078\u300ccangjie5_fluency\u300d\uff08\u5009\u9821\u4e94\u4ee3\u6574\u53e5\u7248\uff09\u3002'))
   Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code).'
+  Write-Host ('    ' + [regex]::Unescape('\u8f38\u5165 dhedhkb \u6703\u8b8a\u6210\u300c\u677f\u6a4b\u300d\u3002'))
 }
 Write-Host '  3. Check the language model loaded (after you typed once with the schema):'
+Write-Host ('  ' + [regex]::Unescape('3. \u78ba\u8a8d\u8a9e\u8a00\u6a21\u578b\u5df2\u8f09\u5165\uff1a\u6253\u4e00\u6b21\u5b57\u4e4b\u5f8c\u57f7\u884c\u4e0b\u9762\u9019\u884c\uff0c\u770b\u5230 use grammar \u4e14\u5f8c\u9762\u6c92\u6709 failed to load grammar database \u5c31\u662f\u6210\u529f\u3002'))
 Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar|failed to load grammar" | Select -Last 5'
 Write-Host '     Loaded = a "use grammar" line and NO "failed to load grammar database" line after it.'
 Write-Host '     (The "use grammar" line is also printed when the .gram file is missing; the failure line is what tells them apart.)'
