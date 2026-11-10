@@ -5,12 +5,16 @@ recipe:
   description: >-
     cangjie5_fluency: full Cangjie 5 sentence-style input (auto-correcting buffer).
     Downloads the code table and the language model from upstream and adds the schema to schema_list.
+# The schema files live in weasel/ in this repo, but plum keeps sub-folders when it installs,
+# so they are downloaded from the same repo to the package root and installed from there.
 download_files: >-
+  cangjie5_fluency.schema.yaml::https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/weasel/cangjie5_fluency.schema.yaml
+  cangjie5_fluency.dict.yaml::https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/weasel/cangjie5_fluency.dict.yaml
   cangjie5.base.dict.yaml::https://raw.githubusercontent.com/rime/rime-cangjie/master/cangjie5.base.dict.yaml
   zh-hant-t-essay-bgw.gram::https://github.com/lotem/rime-octagram-data/raw/hant/zh-hant-t-essay-bgw.gram
 install_files: >-
-  weasel/cangjie5_fluency.schema.yaml
-  weasel/cangjie5_fluency.dict.yaml
+  cangjie5_fluency.schema.yaml
+  cangjie5_fluency.dict.yaml
   cangjie5.base.dict.yaml
   zh-hant-t-essay-bgw.gram
 patch_files:
