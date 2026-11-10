@@ -34,6 +34,9 @@ param(
   [switch]$Cangjie3,
   [switch]$Cangjie5,
   [switch]$NoCangjie3,
+  [switch]$NoFuzzy,
+  [switch]$FuzzyDefault,
+  [ValidateSet('narrow', 'normal', 'wide')][string]$FuzzyRange = 'normal',
   [switch]$Offline,
   [switch]$DryRun,
   [string]$Ref = 'main',
@@ -276,18 +279,25 @@ $schemaFiles = @()
 if ($do5) { $schemaFiles += @('cangjie5_fluency.schema.yaml', 'cangjie5_fluency.dict.yaml') }
 if ($WithV2) { $schemaFiles += 'cangjie5_fluency_v2.schema.yaml' }
 if ($do3) { $schemaFiles += @('cangjie3_fluency.schema.yaml', 'cangjie3_fluency.dict.yaml') }
+$fz3 = $do3 -and -not $NoFuzzy
+$fz5 = $do5 -and -not $NoFuzzy
+if ($fz3) { $schemaFiles += @('cangjie3_fuzzy.schema.yaml', 'cangjie3_fuzzy_prism.schema.yaml') }
+if ($fz5) { $schemaFiles += @('cangjie5_fuzzy.schema.yaml', 'cangjie5_fuzzy_prism.schema.yaml') }
 foreach ($f in $schemaFiles) {
   $dest = Join-Path $RimeDir $f
   $local = $null
+  # the typo-tolerance range (-FuzzyRange narrow|wide) is a different generated copy of the same two files
+  $rel = $f
+  if ($f -match '_fuzzy' -and $FuzzyRange -ne 'normal') { $rel = "fuzzy-$FuzzyRange/$f" }
   if ($here) {
-    foreach ($c in @((Join-Path $here $f), (Join-Path (Join-Path $here 'weasel') $f))) { if (Test-Path $c) { $local = $c; break } }
+    foreach ($c in @((Join-Path $here $f), (Join-Path (Join-Path $here 'weasel') $rel))) { if (Test-Path $c) { $local = $c; break } }
   }
   if ($local) {
     if ($DryRun) { Say "DRY: would copy $local -> $dest"; ZhL ((U '\u9810\u8a08\u8907\u88fd\uff1a') + "$local -> $dest") }
     else { $tmp = "$dest.part"; Copy-Item $local $tmp -Force; Place-File $tmp $dest }
   } else {
     if ($Offline) { Fail "$f is not next to this script and -Offline was given" ($f + (U ' \u4e0d\u5728\u6b64\u8173\u672c\u65c1\u908a\uff0c\u800c\u4e14\u5df2\u6307\u5b9a -Offline')) }
-    Get-Remote "$SchemaRaw/$f" $dest 500 0
+    Get-Remote "$SchemaRaw/$rel" $dest 500 0
   }
 }
 
@@ -337,9 +347,15 @@ else { $tg = Get-Staged 'data\zh-hant-t-essay-bgw.gram' $GramUrl $GramSha $GramS
 # ---------- 5. default.custom.yaml ----------
 $dc = Join-Path $RimeDir 'default.custom.yaml'
 $ids = @()
+if ($FuzzyDefault) { if ($fz3) { $ids += 'cangjie3_fuzzy' }; if ($fz5) { $ids += 'cangjie5_fuzzy' } }
 if ($do3) { $ids += 'cangjie3_fluency' }
+if ($fz3 -and -not $FuzzyDefault) { $ids += 'cangjie3_fuzzy' }
 if ($do5) { $ids += 'cangjie5_fluency' }
+if ($fz5 -and -not $FuzzyDefault) { $ids += 'cangjie5_fuzzy' }
 if ($WithV2) { $ids += 'cangjie5_fluency_v2' }
+# ids that must sit right after their base schema (so they never become the default) when they are added to an existing list
+$afterMap = @{ 'cangjie5_fluency_v2' = 'cangjie5_fluency' }
+if (-not $FuzzyDefault) { $afterMap['cangjie3_fuzzy'] = 'cangjie3_fluency'; $afterMap['cangjie5_fuzzy'] = 'cangjie5_fluency' }
 
 # A patched schema_list REPLACES Weasel's stock list, so keep the stock schemas: read them from Weasel's own default.yaml.
 function Get-StockSchemaIds {
@@ -390,16 +406,17 @@ if (-not (Test-Path $dc)) {
       $new = @()
       for ($i = 0; $i -lt $lines.Count; $i++) {
         $new += $lines[$i]
-        if ($i -eq $idx) { foreach ($id in $missing) { if ($id -ne 'cangjie5_fluency_v2') { $new += ($indent + '- schema: ' + $id) } } }
+        if ($i -eq $idx) { foreach ($id in $missing) { if (-not $afterMap.ContainsKey($id)) { $new += ($indent + '- schema: ' + $id) } } }
       }
-      if ($missing -contains 'cangjie5_fluency_v2') {
-        # the experimental schema goes right after v1 when v1 is listed, so it never becomes the default
+      foreach ($sp in @($missing | Where-Object { $afterMap.ContainsKey($_) })) {
+        # goes right after its base schema when that is listed, so it never becomes the default
+        $base = $afterMap[$sp]
         $at = -1
-        for ($k = 0; $k -lt $new.Count; $k++) { if ($new[$k] -match 'schema:\s*cangjie5_fluency(?![A-Za-z0-9_])') { $at = $k; break } }
+        for ($k = 0; $k -lt $new.Count; $k++) { if ($new[$k] -match ('schema:\s*' + [regex]::Escape($base) + '(?![A-Za-z0-9_])')) { $at = $k; break } }
         if ($at -lt 0) { $at = $idx }
         $head = @($new[0..$at]); $tail = @()
         if ($at + 1 -lt $new.Count) { $tail = @($new[($at + 1)..($new.Count - 1)]) }
-        $new = $head + @($indent + '- schema: cangjie5_fluency_v2') + $tail
+        $new = $head + @($indent + '- schema: ' + $sp) + $tail
       }
       Backup-IfExists $dc
       if ($DryRun) { Say "DRY: would add $($missing -join ', ') to schema_list in $dc"; ZhL ((U '\u9810\u8a08\u5728 ') + $dc + (U ' \u7684 schema_list \u52a0\u5165\uff1a') + ($missing -join ', ')) }
@@ -464,6 +481,15 @@ if ($do3) {
   Write-Host ('    ' + [regex]::Unescape('\u5728\u4efb\u4f55\u8f38\u5165\u6846\u6309 Ctrl+`\uff08\u6216 F4\uff09\uff0c\u9078\u300ccangjie3_fluency\u300d\uff08\u5009\u9821\u4e09\u4ee3\u6574\u53e5\u7248\uff0c\u6392\u5728\u6700\u524d\u9762\uff09\u3002'))
   Write-Host '  2. Type dhedhkb  (should become the two characters for Banqiao as you type the last code); mwyl gives the character for "face".'
   Write-Host ('    ' + [regex]::Unescape('\u8f38\u5165 dhedhkb \u6703\u8b8a\u6210\u300c\u677f\u6a4b\u300d\uff1b\u8f38\u5165 mwyl \u6703\u51fa\u73fe\u300c\u9762\u300d\u3002'))
+  if ($fz3) {
+    if ($FuzzyDefault) {
+      Write-Host '  Adjacent-key typo tolerance is the DEFAULT schema (cangjie3_fuzzy): yhmbv also offers the character typed as yhmbc. The exact candidates stay first. Plain cangjie3_fluency is listed right after it.'
+      Write-Host ('    ' + [regex]::Unescape('\u9130\u9375\u5bb9\u932f\uff08cangjie3_fuzzy\uff09\u662f\u9810\u8a2d\u65b9\u6848\uff0c\u4e0d\u5fc5\u6309 Ctrl+` \u6216 F4\uff1a\u6253\u932f\u4e00\u500b\u76f8\u9130\u6309\u9375\uff08\u4f8b\u5982 yhmbv\uff09\u4e5f\u6703\u51fa yhmbc \u7684\u300c\u984f\u300d\uff0c\u6b63\u78ba\u7684\u5019\u9078\u4ecd\u6392\u5728\u6700\u524d\u9762\u3002\u4e00\u822c\u7684 cangjie3_fluency \u5c31\u6392\u5728\u5b83\u5f8c\u9762\u3002'))
+    } else {
+      Write-Host '  Optional: choose "cangjie3_fuzzy" (second in the list) to also get candidates when ONE key is off by an adjacent key (yhmbv also offers the character typed as yhmbc).'
+      Write-Host ('    ' + [regex]::Unescape('\u9078\u7528\uff1a\u6539\u9078\u6e05\u55ae\u4e2d\u7b2c\u4e8c\u500b\u300ccangjie3_fuzzy\u300d\uff0c\u6253\u932f\u4e00\u500b\u76f8\u9130\u6309\u9375\uff08\u4f8b\u5982 yhmbv\uff09\u4e5f\u6703\u51fa yhmbc \u7684\u300c\u984f\u300d\uff0c\u6b63\u78ba\u7684\u5019\u9078\u4ecd\u6392\u5728\u6700\u524d\u9762\u3002'))
+    }
+  }
 } else {
   Write-Host '  1. Press Ctrl+` (or F4) in any text box and choose the schema "cangjie5_fluency" (5th-generation sentence-style Cangjie).'
   Write-Host ('    ' + [regex]::Unescape('\u5728\u4efb\u4f55\u8f38\u5165\u6846\u6309 Ctrl+`\uff08\u6216 F4\uff09\uff0c\u9078\u300ccangjie5_fluency\u300d\uff08\u5009\u9821\u4e94\u4ee3\u6574\u53e5\u7248\uff09\u3002'))

@@ -14,6 +14,16 @@ root = pathlib.Path(".")
 slim = ["install.ps1", "install.bat", "LICENSE", "README.md",
         "weasel/cangjie5_fluency.schema.yaml", "weasel/cangjie5_fluency.dict.yaml", "weasel/cangjie5_fluency_v2.schema.yaml",
         "weasel/cangjie3_fluency.schema.yaml", "weasel/cangjie3_fluency.dict.yaml", "weasel/README.zh-TW.md",
+        "weasel/cangjie3_fuzzy.schema.yaml", "weasel/cangjie3_fuzzy_prism.schema.yaml",
+        "weasel/cangjie5_fuzzy.schema.yaml", "weasel/cangjie5_fuzzy_prism.schema.yaml",
+        "weasel/fuzzy-narrow/cangjie3_fuzzy.schema.yaml",
+        "weasel/fuzzy-narrow/cangjie3_fuzzy_prism.schema.yaml",
+        "weasel/fuzzy-narrow/cangjie5_fuzzy.schema.yaml",
+        "weasel/fuzzy-narrow/cangjie5_fuzzy_prism.schema.yaml",
+        "weasel/fuzzy-wide/cangjie3_fuzzy.schema.yaml",
+        "weasel/fuzzy-wide/cangjie3_fuzzy_prism.schema.yaml",
+        "weasel/fuzzy-wide/cangjie5_fuzzy.schema.yaml",
+        "weasel/fuzzy-wide/cangjie5_fuzzy_prism.schema.yaml",
         "tools/cin2rime.py", "tools/cin2rime.pl",
         "tables/mscj3.cin", "tables/mscj3-ext.cin", "tables/cj5.cin", "tables/cangjie5.base.dict.yaml", "tables/SHA256SUMS", "tables/README.md"]
 full_extra = ["data/zh-hant-t-essay-bgw.gram", "data/essay.txt", "data/SHA256SUMS", "data/README.md"]

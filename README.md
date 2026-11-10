@@ -106,3 +106,13 @@ English:
 - Based on the 《五倉世紀版》 code table of [rime/rime-cangjie](https://github.com/rime/rime-cangjie), on [rime/rime-quick](https://github.com/rime/rime-quick), and on the `quick5_fluency` prototype proposed by eight04 in [rime-quick#2](https://github.com/rime/rime-quick/issues/2).
 - The Cangjie input method itself was created by Mr. Chu Bong-Foo (朱邦復), who has publicly waived his patent rights.
 - Licence: LGPL-3.0 (same as upstream rime-quick and rime-cangjie), see `LICENSE`.
+
+## 鄰鍵容錯（隨附，預設不啟用）/ Adjacent-key typo tolerance (included, not the default)
+
+安裝時會一併裝入「鄰鍵容錯」方案 `cangjie3_fuzzy`（有選五代時還有 `cangjie5_fuzzy`），排在清單第二位；預設方案仍是 `cangjie3_fluency`。打錯一個相鄰按鍵（例如把 `yhmbc` 打成 `yhmbv`）時，也會列出「顏」，正確的候選永遠排在最前面。
+選項：`-NoFuzzy` 不裝；`-FuzzyRange narrow|normal|wide` 範圍（左右相鄰／再加斜向〔預設〕／再多一圈）；`-FuzzyDefault` 讓它排第一。
+想要它變成預設方案（不必按 Ctrl+` 或 F4 切換），請改用獨立專案 **cangjie-fuzzy-windows**（同樣內含完整的 cj*fluency，一行指令安裝）。依據與預設值：<https://github.com/githubhjs/cangjie-fuzzy-core/blob/main/DEFAULTS.md>
+
+The adjacent-key schema `cangjie3_fuzzy` (and `cangjie5_fuzzy` with Cangjie 5) is installed too, listed second; `cangjie3_fluency` stays the default. When one key is wrong and it is a physical neighbour (`yhmbv` for `yhmbc`) the intended character is offered as well, and exact candidates always come first.
+Options: `-NoFuzzy` skip it; `-FuzzyRange narrow|normal|wide` range (left/right only / plus diagonals (default) / one more ring); `-FuzzyDefault` list it first.
+To make it the default schema (no Ctrl+` / F4 needed) use the separate project **cangjie-fuzzy-windows** (it contains the full cj*fluency too; one-line install). Evidence for the defaults: the DEFAULTS.md linked above.
