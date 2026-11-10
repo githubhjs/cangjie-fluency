@@ -27,6 +27,9 @@ param(
   [string]$WeaselDir = ''
 )
 
+# Everything runs inside a script block (own scope) so that, when started with  irm ... | iex,
+# no variable or $ErrorActionPreference leaks into the user's session and an error never closes the window.
+try { & {
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
@@ -42,7 +45,7 @@ $NeedRelogin = $false
 
 function Say($m)  { Write-Host "[cangjie-fluency] $m" }
 function Warn($m) { Write-Host "[cangjie-fluency] WARNING: $m" -ForegroundColor Yellow }
-function Fail($m) { Write-Host "[cangjie-fluency] ERROR: $m" -ForegroundColor Red; exit 1 }
+function Fail($m) { throw $m }   # caught at the bottom; never use exit (it would close the user's PowerShell under iex)
 
 function Write-Utf8NoBom($path, $text) {
   [IO.File]::WriteAllText($path, $text, (New-Object Text.UTF8Encoding($false)))
@@ -158,10 +161,11 @@ patch:
     - schema: luna_pinyin
 "@
 if (-not (Test-Path $dc)) {
-  if ($DryRun) { Say "DRY: would create $dc" } else { Write-Utf8NoBom $dc ($fresh + "`r`n"); Say 'created default.custom.yaml' }
+  $freshCrlf = ($fresh -replace "`r?`n", "`r`n") + "`r`n"
+  if ($DryRun) { Say "DRY: would create $dc" } else { Write-Utf8NoBom $dc $freshCrlf; Say 'created default.custom.yaml' }
 } else {
   $txt = [IO.File]::ReadAllText($dc)
-  if ($txt -match 'cangjie5_fluency') {
+  if ($txt -match 'cangjie5_fluency(?![A-Za-z0-9_])') {   # not fooled by cangjie5_fluency_v2
     Say 'default.custom.yaml already lists cangjie5_fluency.'
   } else {
     $lines = $txt -split "`r?`n"
@@ -210,3 +214,7 @@ Write-Host '  3. Check the language model loaded (after you typed once with the 
 Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar" | Select -Last 3'
 Write-Host '     No "use grammar" line = the model is not loaded (schema still works).'
 if ($NeedRelogin) { Warn 'Weasel was just installed or upgraded: sign out and sign in again (or restart) before typing, otherwise apps that were already open can crash on first use.' }
+} } catch {
+  Write-Host "[cangjie-fluency] ERROR: $($_.Exception.Message)" -ForegroundColor Red
+  Write-Host '[cangjie-fluency] Stopped. Files written before this point are kept (existing ones were backed up as *.bak-<time>).' -ForegroundColor Red
+}

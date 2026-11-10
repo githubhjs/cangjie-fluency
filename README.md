@@ -22,8 +22,12 @@ irm https://raw.githubusercontent.com/githubhjs/cangjie-fluency/main/install.ps1
 腳本會：安裝小狼毫（用 winget，沒裝才裝）→ 下載缺的碼表與語言模型 → 複製方案 → 保守合併 `default.custom.yaml`（先備份）→ 重新部署。
 裝完請**登出再登入**（或重開機），再按 `Ctrl+`` 切到 `cangjie5_fluency`。可用 `-DryRun` 先看它會做什麼。
 
-已經在用東風破（[plum](https://github.com/rime/plum)）的人也可以：`rime-install githubhjs/cangjie-fluency`
-（會下載碼表與語言模型、安裝方案，並把 `cangjie5_fluency` 附加到 `schema_list` 的最後面；Windows 需要 plum 的 bootstrap 包，內含 git、7z）。
+進階：也可以用東風破（[plum](https://github.com/rime/plum)）`rime-install githubhjs/cangjie-fluency`（Windows 需要 plum 的 bootstrap 包，內含 git、7z）。
+**但只適合從沒自訂過方案清單的人，其他人請用上面的一行安裝：**
+- plum 會把 `default.custom.yaml` 的內容直接附加在檔案後面。從小狼毫方案選單產生的那種檔案沒有結尾換行，附加後 YAML 會壞掉，
+  而且畫面上沒有任何錯誤；就算沒壞，你原本的清單也會被小狼毫的預設清單取代（Windows 實測：原有的方案消失）。
+- 小狼毫自帶的 `rime-install-config.bat` 會強制改用登錄檔裡的使用者資料夾，所以 `rime_dir=` 不能讓你先在暫存資料夾試跑，
+  它會直接改到你真正的設定。**用之前請先備份 `%APPDATA%\Rime\default.custom.yaml`。**
 **腳本在 Linux 的 PowerShell 上驗證過邏輯，Windows 上的完整流程尚待實測。**
 
 ## 狀態 / Status
