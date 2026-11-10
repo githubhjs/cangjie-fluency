@@ -12,6 +12,6 @@ CASES="$1"; shift
 mapfile -t C < "$CASES"
 for g in "" "--no-grammar"; do
   python3 -I "$P/weasel/docs/rime_driver.py" --root "$R" --shared "${SHARED:-$P/testenv/shared}" \
-    --user "${USERDIR:-$P/testenv/user}" --base "$P/testenv/shared/cangjie5.base.dict.yaml" \
+    --user "${USERDIR:-$P/testenv/user}" --base "${BASE:-$P/testenv/shared/cangjie5.base.dict.yaml}" \
     $g "$@" "${C[@]}" 2>&1
 done

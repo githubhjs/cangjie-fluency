@@ -19,6 +19,9 @@ files = {
     "weasel/cangjie5_fluency.schema.yaml": "weasel/cangjie5_fluency.schema.yaml",
     "weasel/cangjie5_fluency.dict.yaml": "weasel/cangjie5_fluency.dict.yaml",
     "weasel/cangjie5_fluency_v2.schema.yaml": "weasel/cangjie5_fluency_v2.schema.yaml",
+    "weasel/cangjie3_fluency.schema.yaml": "weasel/cangjie3_fluency.schema.yaml",
+    "weasel/cangjie3_fluency.dict.yaml": "weasel/cangjie3_fluency.dict.yaml",
+    "tools/cin2rime.py": "tools/cin2rime.py",
     "weasel/README.zh-TW.md": "weasel/README.zh-TW.md",
 }
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:

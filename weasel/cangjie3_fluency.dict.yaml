@@ -1,0 +1,18 @@
+# Rime dictionary
+# encoding: utf-8
+#
+# Full Cangjie 3 (not Quick/速成): only the single-character base table is
+# imported. Phrase entries are generated from the preset vocabulary
+# (essay.txt) by combining the full Cangjie code of each character.
+#
+# Requires cangjie3.base.dict.yaml (generated from PIME mscj3.cin by tools/cin2rime.py; not in git) and essay.txt
+# in the same user data / shared data directory.
+
+---
+name: cangjie3_fluency
+version: "0.1"
+sort: by_weight
+use_preset_vocabulary: true
+import_tables:
+  - cangjie3.base
+...

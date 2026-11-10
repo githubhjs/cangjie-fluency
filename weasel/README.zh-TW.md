@@ -120,6 +120,31 @@ v2 修改的設定：`speller/use_space: true`（拿掉 punctuator 的空格）�
 標點應該切斷整句上下文。這正是 v1 的行為，所以 v1 是預設建議（見 `docs/xp-behavior-notes.md`，內容是個人回憶，不是微軟文件）。
 v2 沒有造成辨識正確率退步，但上表的行為差異請你實際試過再決定。
 
+## 6c. 三代倉頡版本 cangjie3_fluency（Windows XP 新倉頡的碼表）
+
+**為什麼**：Windows XP 內建的「新倉頡」是改良過的**三代**倉頡，本專案預設的 cangjie5_fluency 用五代碼表，
+約兩成的字碼不同（例如「面」三代 `mwyl`、五代 `mwsl`；「作」三代 `ohs`、五代 `oos`；「非」三代 `lmyyy`、五代 `lmsy`）。
+五代對同碼的第二個字會加 X（難）前綴，三代沒有：「知」「佑」三代同碼 `okr`，佑排第一、知是第二個候選。
+
+**安裝**：在 PowerShell 執行
+
+```powershell
+.\install.ps1 -Cangjie3
+```
+
+腳本會安裝 `cangjie3_fluency`（引擎行為與 v1 `cangjie5_fluency` 相同，只換碼表），並把它放在
+`default.custom.yaml` 方案清單的**第一個**（已有清單則插入第一項）。
+
+**碼表來源**：PIME 專案的 `mscj3.cin`
+（https://raw.githubusercontent.com/EasyIME/PIME/master/python/cinbase/cin/mscj3.cin，約 200 KB）。
+這個檔案**沒有授權聲明，所以不在本專案內**：安裝時才從 PIME 下載，在你的電腦上轉換成
+`cangjie3.base.dict.yaml`（轉換器 `tools/cin2rime.py`；install.ps1 內有逐位元組相同輸出的 PowerShell 版）。
+轉換時會用 essay.txt 的字頻當權重，同碼字仍維持 .cin 的順序。若沒有 essay.txt，句子正確率會明顯下降
+（Linux 測試，不載入語言模型時：一般 51 句 47/51、困難組 40 句 31/40；有 essay.txt 權重則為 51/51、37/40）。
+
+**測試狀態**：只在 Linux（librime 1.10）測過；PowerShell 轉換只在 pwsh 7 測過，Windows PowerShell 5.1 與小狼毫實機都沒測。
+詳見 `docs/test-log-cangjie3.md`。三代碼表是否與 Windows XP 新倉頡完全一致**未驗證**（只核對了面、非、作、知／佑）。
+
 ## 7. 若部署失敗 / 編譯不過
 
 1. 看日誌：**小狼毫 0.17.4 放在資料夾 `%TEMP%\rime.weasel\`**（例如
