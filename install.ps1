@@ -14,6 +14,9 @@
             -NoCangjie3         do NOT install the 3rd-generation schema (then the 5th generation is installed)
             -WithV2             also install the experimental cangjie5_fluency_v2 schema (implies -Cangjie5)
             -Cangjie3           accepted for compatibility; the 3rd generation is now installed by default
+            -NoSweep            do NOT install the Sweep Pad (cangjie-sweep)
+            -PadRef <tag>       which version of Sweep Pad to install (default: v0.2.0)
+            -Uninstall          remove Sweep Pad files and Start Menu shortcut
 
   DEFAULT = 3rd-generation Cangjie (cangjie3_fluency, the table behind Windows XP's new Cangjie). Its table
   (mscj3.cin, kept unchanged in this repository under tables/, SHA-256 checked) is converted here into
@@ -37,6 +40,9 @@ param(
   [switch]$NoFuzzy,
   [switch]$FuzzyDefault,
   [ValidateSet('narrow', 'normal', 'wide')][string]$FuzzyRange = 'normal',
+  [switch]$NoSweep,
+  [string]$PadRef = 'v0.2.0',
+  [switch]$Uninstall,
   [switch]$Offline,
   [switch]$DryRun,
   [string]$Ref = 'main',
@@ -67,6 +73,16 @@ $GramSha     = '0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1
 $GramSize    = 41415724
 $Cin3Url     = "$RepoRaw/tables/mscj3.cin"
 $Cin3Sha256  = 'a7b3d03898dc0b2b0bd7803ad0be7b940a1ed945ac5d6314ed832b1dbf6839a2'
+$PadRepo     = 'githubhjs/cangjie-fuzzy-core'
+if (-not $PadRef) { $PadRef = 'v0.2.0' }
+$PadZipName  = "cangjie-sweep-pad-$PadRef.zip"
+$PadUrl      = "https://github.com/$PadRepo/releases/download/$PadRef/$PadZipName"
+$PadShaUrl   = "$PadUrl.sha256"
+$localAppData = $env:LOCALAPPDATA
+if (-not $localAppData) {
+  $localAppData = if ($env:XDG_DATA_HOME) { $env:XDG_DATA_HOME } elseif ($env:HOME) { Join-Path $env:HOME '.local/share' } else { [IO.Path]::GetTempPath() }
+}
+$sweepDir = Join-Path $localAppData 'cangjie-sweep'
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $do3 = -not $NoCangjie3                                  # 3rd generation is the default
 $do5 = [bool]($Cangjie5 -or $WithV2 -or $NoCangjie3)     # 5th generation only when asked for (or when 3rd is declined)
@@ -78,6 +94,34 @@ function ZhL($m) { Write-Host ('                  ' + $m) }
 function ZhW($m) { Write-Host ('                  ' + $m) -ForegroundColor Yellow }
 function Warn($m) { Write-Host "[cangjie-fluency] WARNING: $m" -ForegroundColor Yellow }
 function Fail($m, $zh = '') { $ex = New-Object System.Exception $m; if ($zh) { $ex.Data['zh'] = $zh }; throw $ex }   # caught at the bottom; never use exit (it would close the user's PowerShell under iex)
+
+if ($Uninstall) {
+  Say 'Uninstalling Sweep Pad...'
+  ZhL (U '\u6b63\u5728\u79fb\u9664\u5009\u9821\u6ed1\u884c\u9762\u677f...')
+  $programsDir = [Environment]::GetFolderPath('Programs')
+  if (-not $programsDir -and $env:APPDATA) { $programsDir = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs' }
+  $scName = (U 'Cangjie Sweep \u5009\u9821\u6ed1\u884c.lnk')
+  $scPath = if ($programsDir) { Join-Path $programsDir $scName } else { $null }
+
+  if ($DryRun) {
+    if (Test-Path $sweepDir) { Say "DRY: would remove directory $sweepDir"; ZhL ((U '\u9810\u8a08\u79fb\u9664\u8cc7\u6599\u593e\uff1a') + $sweepDir) }
+    if ($scPath -and (Test-Path $scPath)) { Say "DRY: would remove shortcut $scPath"; ZhL ((U '\u9810\u8a08\u79fb\u9664\u6377\u5f91\uff1a') + $scPath) }
+  } else {
+    if (Test-Path $sweepDir) {
+      Remove-Item -Path $sweepDir -Recurse -Force
+      Say "Removed directory: $sweepDir"
+      ZhL ((U '\u5df2\u79fb\u9664\u8cc7\u6599\u593e\uff1a') + $sweepDir)
+    }
+    if ($scPath -and (Test-Path $scPath)) {
+      Remove-Item -Path $scPath -Force
+      Say "Removed shortcut: $scPath"
+      ZhL ((U '\u5df2\u79fb\u9664\u6377\u5f91\uff1a') + $scPath)
+    }
+    Say 'Sweep Pad uninstalled.'
+    ZhL (U '\u5009\u9821\u6ed1\u884c\u9762\u677f\u5df2\u79fb\u9664\u3002')
+  }
+  return
+}
 
 function Write-Utf8NoBom($path, $text) {
   [IO.File]::WriteAllText($path, $text, (New-Object Text.UTF8Encoding($false)))
@@ -472,6 +516,258 @@ if ($NoDeploy -or $DryRun -or -not $weasel) {
   if ($p.ExitCode -ne 0) { Warn "WeaselDeployer exit code $($p.ExitCode). Look at %TEMP%\rime.weasel\ for ERROR logs."; ZhW ((U 'WeaselDeployer \u7d50\u675f\u4ee3\u78bc\u70ba ') + $p.ExitCode + (U '\u3002\u8acb\u67e5\u770b %TEMP%\\rime.weasel\\ \u88e1\u7684 ERROR \u8a18\u9304\u3002')) } else { Say 'deploy finished.'; ZhL (U '\u90e8\u7f72\u5b8c\u6210\u3002') }
 }
 
+# ---------- 6.5. Sweep Pad ----------
+$sweepInstalled = $false
+$sweepSelfCheckOk = $false
+$sweepSelfCheckMsg = ''
+$sweepPythonFound = $false
+
+if ($NoSweep) {
+  Say 'skipping Sweep Pad (-NoSweep).'
+  ZhL (U '\u7565\u904e\u5009\u9821\u6ed1\u884c\u9762\u677f\uff08-NoSweep\uff09\u3002')
+} else {
+  $pyExe = $null
+  $pyArgs = @()
+  $pywExe = $null
+
+  $pyCands = @(
+    @{ Cmd = 'py'; Args = @('-3') },
+    @{ Cmd = 'python'; Args = @() }
+  )
+  foreach ($cand in $pyCands) {
+    $cmd = Get-Command $cand.Cmd -ErrorAction SilentlyContinue
+    if (-not $cmd) { continue }
+    try {
+      $psi = New-Object Diagnostics.ProcessStartInfo
+      $psi.FileName = $cmd.Source
+      $tArgs = $cand.Args + @('-c', 'import sys, tkinter; sys.exit(0 if sys.version_info >= (3, 8) else 1)')
+      $psi.Arguments = ($tArgs | ForEach-Object { if ($_ -match ' ') { '"' + $_ + '"' } else { $_ } }) -join ' '
+      $psi.UseShellExecute = $false
+      $psi.CreateNoWindow = $true
+      $psi.RedirectStandardOutput = $true
+      $psi.RedirectStandardError = $true
+      $p = [Diagnostics.Process]::Start($psi)
+      $p.WaitForExit(5000)
+      if ($p.ExitCode -eq 0) {
+        $pyExe = $cmd.Source
+        $pyArgs = $cand.Args
+        $sweepPythonFound = $true
+        break
+      }
+    } catch { }
+  }
+
+  if (-not $sweepPythonFound) {
+    Warn 'Python 3.8+ with tkinter was not found. Sweep Pad requires Python with tkinter.'
+    ZhW (U '\u627e\u4e0d\u5230\u652f\u63f4 tkinter \u7684 Python 3.8+ \u7248\u672c\u3002\u5009\u9821\u6ed1\u884c\u9762\u677f\u9700\u8981 Python \u8207 tkinter\u3002')
+    Say 'To install Python, run: winget install Python.Python.3.12'
+    ZhL (U '\u5b89\u88dd Python \u8acb\u57f7\u884c\uff1awinget install Python.Python.3.12')
+  } else {
+    $pywCmd = Get-Command 'pythonw' -ErrorAction SilentlyContinue
+    if ($pywCmd) { $pywExe = $pywCmd.Source }
+    elseif ($pyExe) {
+      $candW = Join-Path (Split-Path $pyExe) 'pythonw.exe'
+      if (Test-Path $candW) { $pywExe = $candW }
+    }
+    if (-not $pywExe) { $pywExe = 'pythonw.exe' }
+  }
+
+  if ($DryRun) {
+    Say "DRY: would install Sweep Pad ($PadRef) to $sweepDir"
+    ZhL ((U '\u9810\u8a08\u5b89\u88dd\u5009\u9821\u6ed1\u884c\u9762\u677f\uff08') + $PadRef + (U '\uff09\u81f3 ') + $sweepDir)
+    Say "DRY: would create Start Menu shortcut 'Cangjie Sweep' and cangjie-sweep.bat"
+    ZhL (U '\u9810\u8a08\u5efa\u7acb\u958b\u59cb\u529f\u80fd\u8868\u6377\u5f91\u300cCangjie Sweep \u5009\u9821\u6ed1\u884c\u300d\u8207 cangjie-sweep.bat')
+  } else {
+    $localZip = $null
+    $localSha = $null
+    if ($here) {
+      $zipCands = @(
+        (Join-Path $here (Join-Path 'sweep-pad' 'cangjie-sweep-pad.zip')),
+        (Join-Path $here (Join-Path 'sweep-pad' $PadZipName)),
+        (Join-Path $here 'cangjie-sweep-pad.zip'),
+        (Join-Path $here $PadZipName)
+      )
+      foreach ($zc in $zipCands) { if (Test-Path $zc) { $localZip = $zc; break } }
+
+      $shaCands = @(
+        (Join-Path $here (Join-Path 'sweep-pad' 'cangjie-sweep-pad.zip.sha256')),
+        (Join-Path $here (Join-Path 'sweep-pad' "$PadZipName.sha256")),
+        (Join-Path $here 'cangjie-sweep-pad.zip.sha256'),
+        (Join-Path $here "$PadZipName.sha256")
+      )
+      foreach ($sc in $shaCands) { if (Test-Path $sc) { $localSha = $sc; break } }
+    }
+
+    $stagedZip = $null
+    $stagedSha = $null
+    $isTempZip = $false
+    $isTempSha = $false
+
+    if ($localZip) {
+      $stagedZip = $localZip
+      Say "using local Sweep Pad zip: $localZip"
+      ZhL ((U '\u4f7f\u7528\u672c\u6a5f\u6ed1\u884c\u9762\u677f\u58d3\u7e2e\u5305\uff1a') + $localZip)
+    } elseif ($Offline) {
+      Warn "cangjie-sweep-pad.zip was not found next to this script and -Offline was given; skipping Sweep Pad."
+      ZhW (U '\u5728\u672c\u6a5f\u627e\u4e0d\u5230 cangjie-sweep-pad.zip \u4e14\u5df2\u6307\u5b9a -Offline\uff1b\u7565\u904e\u5009\u9821\u6ed1\u884c\u9762\u677f\u3002')
+    } else {
+      $tmpZ = Join-Path ([IO.Path]::GetTempPath()) ("cjf-sweep-$Stamp-$PadZipName")
+      Say "downloading $PadUrl"
+      ZhL ((U '\u4e0b\u8f09\u4e2d\uff1a') + $PadUrl)
+      try {
+        Invoke-WebRequest -Uri $PadUrl -OutFile $tmpZ -UseBasicParsing
+        $stagedZip = $tmpZ
+        $isTempZip = $true
+      } catch {
+        Warn "could not download Sweep Pad zip: $($_.Exception.Message)"
+        ZhW ((U '\u7121\u6cd5\u4e0b\u8f09\u5009\u9821\u6ed1\u884c\u9762\u677f\u58d3\u7e2e\u5305\uff1a') + $_.Exception.Message)
+      }
+    }
+
+    if ($stagedZip) {
+      if ($localSha) {
+        $stagedSha = $localSha
+      } elseif ($Offline) {
+        # offline with no sha file
+      } else {
+        $tmpS = Join-Path ([IO.Path]::GetTempPath()) ("cjf-sweep-$Stamp-$PadZipName.sha256")
+        try {
+          Invoke-WebRequest -Uri $PadShaUrl -OutFile $tmpS -UseBasicParsing
+          $stagedSha = $tmpS
+          $isTempSha = $true
+        } catch {
+          Warn "could not download Sweep Pad checksum: $($_.Exception.Message)"
+          ZhW ((U '\u7121\u6cd5\u4e0b\u8f09\u5009\u9821\u6ed1\u884c\u9762\u677f\u6821\u9a57\u78bc\uff1a') + $_.Exception.Message)
+        }
+      }
+
+      if ($stagedSha -and (Test-Path $stagedSha)) {
+        $shaContent = [IO.File]::ReadAllText($stagedSha).Trim()
+        $m = [regex]::Match($shaContent, '([0-9a-fA-F]{64})')
+        if ($m.Success) {
+          $expectedHash = $m.Groups[1].Value.ToLower()
+          $actualHash = ((Get-Sha256 $stagedZip) -replace '-', '').ToLower()
+          if ($actualHash -ne $expectedHash) {
+            if ($isTempZip) { Remove-Item $stagedZip -Force -ErrorAction SilentlyContinue }
+            if ($isTempSha) { Remove-Item $stagedSha -Force -ErrorAction SilentlyContinue }
+            Fail "Sweep Pad zip SHA-256 mismatch: got $actualHash, expected $expectedHash" ((U '\u5009\u9821\u6ed1\u884c\u9762\u677f\u58d3\u7e2e\u5305 SHA-256 \u4e0d\u7b26\uff1a\u5be6\u969b\u70ba ') + $actualHash + (U '\uff0c\u9810\u671f\u70ba ') + $expectedHash)
+          }
+          Say 'Sweep Pad zip checksum verified.'
+          ZhL (U '\u5009\u9821\u6ed1\u884c\u9762\u677f\u58d3\u7e2e\u5305\u6821\u9a57\u78bc\u6b63\u78ba\u3002')
+        }
+      }
+
+      $tmpExtract = Join-Path ([IO.Path]::GetTempPath()) ("cjf-sweepext-$Stamp")
+      if (Test-Path $tmpExtract) { Remove-Item $tmpExtract -Recurse -Force -ErrorAction SilentlyContinue }
+      New-Item -ItemType Directory -Path $tmpExtract | Out-Null
+      try {
+        try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { }
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($stagedZip, $tmpExtract)
+
+        if (-not (Test-Path $sweepDir)) {
+          New-Item -ItemType Directory -Path $sweepDir -Force | Out-Null
+        }
+
+        Get-ChildItem -Path $tmpExtract | ForEach-Object {
+          Copy-Item -Path $_.FullName -Destination $sweepDir -Recurse -Force
+        }
+        $sweepInstalled = $true
+        Say "Sweep Pad installed to $sweepDir"
+        ZhL ((U '\u5009\u9821\u6ed1\u884c\u9762\u677f\u5df2\u5b89\u88dd\u81f3\uff1a') + $sweepDir)
+      } catch {
+        Warn "Failed to extract Sweep Pad: $($_.Exception.Message)"
+        ZhW ((U '\u89e3\u58d3\u7e2e\u5009\u9821\u6ed1\u884c\u9762\u677f\u5931\u6548\uff1a') + $_.Exception.Message)
+      } finally {
+        if (Test-Path $tmpExtract) { Remove-Item $tmpExtract -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($isTempZip) { Remove-Item $stagedZip -Force -ErrorAction SilentlyContinue }
+        if ($isTempSha) { Remove-Item $stagedSha -Force -ErrorAction SilentlyContinue }
+      }
+    }
+
+    if ($sweepInstalled) {
+      $sweepPyScript = Join-Path $sweepDir 'cangjie_sweep_pad.py'
+
+      $batLines = @(
+        '@echo off',
+        'setlocal',
+        'cd /d "%~dp0"',
+        'where pythonw >nul 2>&1',
+        'if %ERRORLEVEL% EQU 0 (',
+        '  start "" pythonw "%~dp0cangjie_sweep_pad.py" %*',
+        '  exit /b 0',
+        ')',
+        'where py >nul 2>&1',
+        'if %ERRORLEVEL% EQU 0 (',
+        '  start "" py -3 "%~dp0cangjie_sweep_pad.py" %*',
+        '  exit /b 0',
+        ')',
+        'where python >nul 2>&1',
+        'if %ERRORLEVEL% EQU 0 (',
+        '  start "" python "%~dp0cangjie_sweep_pad.py" %*',
+        '  exit /b 0',
+        ')',
+        'echo Python 3.8+ with tkinter was not found.',
+        'echo Install it with: winget install Python.Python.3.12',
+        'pause'
+      )
+      $batPath = Join-Path $sweepDir 'cangjie-sweep.bat'
+      [IO.File]::WriteAllText($batPath, ($batLines -join "`r`n") + "`r`n", [Text.Encoding]::ASCII)
+      Say "Created launcher: $batPath"
+      ZhL ((U '\u5df2\u5efa\u7acb\u555f\u52d5\u6a94\uff1a') + $batPath)
+
+      try {
+        $programsDir = [Environment]::GetFolderPath('Programs')
+        if (-not $programsDir -and $env:APPDATA) {
+          $programsDir = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+        }
+        if ($programsDir -and (Test-Path $programsDir)) {
+          $scName = (U 'Cangjie Sweep \u5009\u9821\u6ed1\u884c.lnk')
+          $scPath = Join-Path $programsDir $scName
+          $wsh = New-Object -ComObject WScript.Shell
+          $sc = $wsh.CreateShortcut($scPath)
+          $sc.TargetPath = if ($pywExe) { $pywExe } else { 'pythonw.exe' }
+          $sc.Arguments = "`"$sweepPyScript`""
+          $sc.WorkingDirectory = $sweepDir
+          $sc.Description = 'Cangjie Sweep Pad'
+          $sc.Save()
+          Say "Created Start Menu shortcut: $scName"
+          ZhL ((U '\u5df2\u5efa\u7acb\u958b\u59cb\u529f\u80fd\u8868\u6377\u5f91\uff1a') + $scName)
+        }
+      } catch { }
+
+      if ($sweepPythonFound -and (Test-Path $sweepPyScript)) {
+        try {
+          $psi = New-Object Diagnostics.ProcessStartInfo
+          $psi.FileName = $pyExe
+          $scArgs = $pyArgs + @($sweepPyScript, '--self-check')
+          $psi.Arguments = ($scArgs | ForEach-Object { if ($_ -match ' ') { '"' + $_ + '"' } else { $_ } }) -join ' '
+          $psi.UseShellExecute = $false
+          $psi.CreateNoWindow = $true
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.WorkingDirectory = $sweepDir
+          $p = [Diagnostics.Process]::Start($psi)
+          $outStr = $p.StandardOutput.ReadToEnd()
+          $errStr = $p.StandardError.ReadToEnd()
+          $p.WaitForExit(10000)
+          if ($p.ExitCode -eq 0) {
+            $sweepSelfCheckOk = $true
+            Say 'Sweep Pad self-check passed.'
+            ZhL (U '\u5009\u9821\u6ed1\u884c\u9762\u677f\u81ea\u6aa2\u6210\u529f\u3002')
+          } else {
+            $sweepSelfCheckMsg = ($outStr + ' ' + $errStr).Trim()
+            Warn "Sweep Pad self-check returned exit code $($p.ExitCode): $sweepSelfCheckMsg"
+            ZhW ((U '\u5009\u9821\u6ed1\u884c\u9762\u677f\u81ea\u6aa2\u50b3\u56de\u932f\u8aa4\u78bc ') + $p.ExitCode + ': ' + $sweepSelfCheckMsg)
+          }
+        } catch {
+          Warn "Could not run Sweep Pad self-check: $($_.Exception.Message)"
+          ZhW ((U '\u7121\u6cd5\u57f7\u884c\u5009\u9821\u6ed1\u884c\u9762\u677f\u81ea\u6aa2\uff1a') + $_.Exception.Message)
+        }
+      }
+    }
+  }
+}
+
 # ---------- 7. what next ----------
 Write-Host ''
 Say 'Done. Next steps:'
@@ -506,6 +802,23 @@ Write-Host ('  ' + [regex]::Unescape('3. \u78ba\u8a8d\u8a9e\u8a00\u6a21\u578b\u5
 Write-Host '       Select-String -Path "$env:TEMP\rime.weasel\*.log" -Pattern "use grammar|failed to load grammar" | Select -Last 5'
 Write-Host '     Loaded = a "use grammar" line and NO "failed to load grammar database" line after it.'
 Write-Host '     (The "use grammar" line is also printed when the .gram file is missing; the failure line is what tells them apart.)'
+if (-not $NoSweep) {
+  Write-Host '  4. Cangjie Sweep Pad (mouse/touch glide typing):'
+  Write-Host ('    ' + [regex]::Unescape('4. \u5009\u9821\u6ed1\u884c\u9762\u677f\uff08\u6ed1\u9f20\uff0f\u89f8\u63a7\u6ed1\u884c\u8f38\u5165\uff09\uff1a'))
+  Write-Host ('     - Open from Start Menu: "' + (U 'Cangjie Sweep \u5009\u9821\u6ed1\u884c') + '" (or run ' + (Join-Path $sweepDir 'cangjie-sweep.bat') + ')')
+  Write-Host ('       ' + [regex]::Unescape('\u5f9e\u958b\u59cb\u529f\u80fd\u8868\u958b\u555f\u300cCangjie Sweep \u5009\u9821\u6ed1\u884c\u300d\uff08\u6216\u57f7\u884c ') + (Join-Path $sweepDir 'cangjie-sweep.bat') + [regex]::Unescape('\uff09\u3002'))
+  Write-Host '     - IMPORTANT: Weasel (Rime) MUST be the active input method in your target application.'
+  Write-Host ('       ' + [regex]::Unescape('\u91cd\u8981\uff1a\u76ee\u6a19\u61c9\u7528\u7a0b\u5f0f\u5167\u5fc5\u9808\u4ee5\u5c0f\u72fc\u6beb\uff08Rime\uff09\u70ba\u7576\u524d\u4f5c\u7528\u8f38\u5165\u6cd5\u3002'))
+  if ($sweepSelfCheckOk) {
+    Write-Host '     - Self-check: PASSED.'
+    Write-Host ('       ' + [regex]::Unescape('\u81ea\u6aa2\uff1a\u901a\u904e\u3002'))
+  } elseif (-not $sweepPythonFound) {
+    Write-Host '     - Python 3.8+ with tkinter is needed to run the Sweep Pad. Install via:'
+    Write-Host '         winget install Python.Python.3.12'
+    Write-Host ('       ' + [regex]::Unescape('\u57f7\u884c\u6ed1\u884c\u9762\u677f\u9700\u8981 Python 3.8+ \u53ca tkinter\uff0c\u5b89\u88dd\u6307\u4ee4\uff1a'))
+    Write-Host '         winget install Python.Python.3.12'
+  }
+}
 } } catch {
   Write-Host "[cangjie-fluency] ERROR: $($_.Exception.Message)" -ForegroundColor Red
   Write-Host ('                  ' + [regex]::Unescape('\u932f\u8aa4\uff1a') + $(if ($_.Exception.Data['zh']) { $_.Exception.Data['zh'] } else { $_.Exception.Message })) -ForegroundColor Red

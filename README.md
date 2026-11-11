@@ -61,6 +61,9 @@ When it finishes, press `Ctrl+`` or `F4` and switch to `cangjie3_fluency`. Use `
 | `-Cangjie5` | 另外裝五代 `cangjie5_fluency` / also install the 5th generation `cangjie5_fluency` |
 | `-NoCangjie3` | 不裝三代，改裝五代（舊版的預設行為） / do not install the 3rd generation, install the 5th instead (the old default) |
 | `-WithV2` | 再加實驗性的 v2（排在 v1 後面，不會變成預設；會一併裝五代） / also add the experimental v2 (listed after v1, never the default; installs the 5th generation too) |
+| `-NoSweep` | 不安裝倉頡滑行面板（預設會安裝） / do not install Cangjie Sweep Pad (installed by default) |
+| `-PadRef <tag>` | 指定倉頡滑行面板版本（預設 v0.2.0） / specify Sweep Pad release tag (default: v0.2.0) |
+| `-Uninstall` | 移除倉頡滑行面板與捷徑 / remove Sweep Pad and shortcut |
 | `-NoModel` / `-DryRun` / `-NoDeploy` | 不下載語言模型／只顯示不做／只複製檔案不部署 / do not download the language model / only show, change nothing / copy files only, do not deploy |
 
 三代碼表 `tables/mscj3.cin` 就放在本倉庫（來源、雜湊與使用說明見 `tables/README.md`），安裝時在你的電腦上轉換成 Rime 格式；語言模型與詞表也都在本倉庫（`data/`）。**安裝時只從本倉庫取檔，不需要連到任何第三方**（小狼毫本身除外，見下）。五代碼表約兩成的字碼與三代不同，詳見 `weasel/README.zh-TW.md` 第 6c 節。
@@ -116,3 +119,27 @@ English:
 The adjacent-key schema `cangjie3_fuzzy` (and `cangjie5_fuzzy` with Cangjie 5) is installed too, listed second; `cangjie3_fluency` stays the default. When one key is wrong and it is a physical neighbour (`yhmbv` for `yhmbc`) the intended character is offered as well, and exact candidates always come first.
 Options: `-NoFuzzy` skip it; `-FuzzyRange narrow|normal|wide` range (left/right only / plus diagonals (default) / one more ring); `-FuzzyDefault` list it first.
 To make it the default schema (no Ctrl+` / F4 needed) use the separate project **cangjie-fuzzy-windows** (it contains the full cj*fluency too; one-line install). Evidence for the defaults: the DEFAULTS.md linked above.
+
+## 倉頡滑行輸入面板（隨附） / Cangjie Sweep Pad (included)
+
+Windows 安裝程式預設會一併安裝「倉頡滑行輸入面板」（[cangjie-fuzzy-core](https://github.com/githubhjs/cangjie-fuzzy-core) 的 `cangjie_sweep_pad.py`），提供滑鼠／觸控在虛擬鍵盤上滑行或點擊輸入倉頡碼的功能。
+
+- **安裝位置**：`%LOCALAPPDATA%\cangjie-sweep`
+- **啟動方式**：從「開始」功能表開啟「Cangjie Sweep 倉頡滑行」，或執行安裝資料夾內的 `cangjie-sweep.bat`。
+- **系統需求**：Python 3.8 以上且支援 tkinter（若無 Python，可執行 `winget install Python.Python.3.12` 安裝；若未偵測到 Python，Rime 方案本身仍會順利安裝完成）。
+- **重要事項**：使用滑行面板向目標軟體送字時，**目標應用程式內的作用中輸入法必須是小狼毫（Weasel / Rime）**。
+- **選項**：可傳入 `-NoSweep` 略過安裝，或 `-PadRef <tag>` 指定版本。
+
+English:
+
+The Windows installer installs the "Cangjie Sweep Pad" (`cangjie_sweep_pad.py` from [cangjie-fuzzy-core](https://github.com/githubhjs/cangjie-fuzzy-core)) by default, providing mouse and touch glide/click typing on an on-screen keyboard.
+
+- **Location**: `%LOCALAPPDATA%\cangjie-sweep`
+- **How to launch**: Open "Cangjie Sweep 倉頡滑行" from the Start Menu, or run `cangjie-sweep.bat` in the install folder.
+- **Prerequisites**: Python 3.8+ with tkinter (install via `winget install Python.Python.3.12`; if Python is missing, the Rime schema installation still succeeds).
+- **IMPORTANT**: When typing via the Sweep Pad, **Weasel (Rime) MUST be the active input method in your target application**.
+- **Options**: Pass `-NoSweep` to skip installing the pad, or `-PadRef <tag>` to pin a specific release version.
+
+## Changelog / 更新紀錄
+
+- **v0.6.0** — Sweep Pad added; default on, `-NoSweep` to skip. / 新增倉頡滑行輸入板；預設安裝，加 `-NoSweep` 可略過。
