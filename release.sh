@@ -8,12 +8,13 @@ V="${1:?usage: ./release.sh vX.Y.Z [--publish]}"
 cd "$(dirname "$0")"
 mkdir -p dist
 
-PAD_REF="${PAD_REF:-v0.3.0}"
+PAD_REF="${PAD_REF:-v0.4.0}"
 PAD_BASE_URL="https://github.com/githubhjs/cangjie-fuzzy-core/releases/download/$PAD_REF"
 PAD_ZIP="cangjie-sweep-pad-$PAD_REF.zip"
 PAD_SHA="$PAD_ZIP.sha256"
 
 mkdir -p dl
+rm -f dl/cangjie-sweep-pad.zip dl/cangjie-sweep-pad.zip.sha256   # never reuse a stale unversioned pad; always rebuild from $PAD_REF
 if [ ! -f "dl/cangjie-sweep-pad.zip" ]; then
   if [ -f "dl/$PAD_ZIP" ]; then
     cp "dl/$PAD_ZIP" "dl/cangjie-sweep-pad.zip"
