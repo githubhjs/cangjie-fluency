@@ -62,7 +62,7 @@ When it finishes, press `Ctrl+`` or `F4` and switch to `cangjie3_fluency`. Use `
 | `-NoCangjie3` | 不裝三代，改裝五代（舊版的預設行為） / do not install the 3rd generation, install the 5th instead (the old default) |
 | `-WithV2` | 再加實驗性的 v2（排在 v1 後面，不會變成預設；會一併裝五代） / also add the experimental v2 (listed after v1, never the default; installs the 5th generation too) |
 | `-NoSweep` | 不安裝倉頡滑行面板（預設會安裝） / do not install Cangjie Sweep Pad (installed by default) |
-| `-PadRef <tag>` | 指定倉頡滑行面板版本（預設 v0.4.1） / specify Sweep Pad release tag (default: v0.4.1) |
+| `-PadRef <tag>` | 指定倉頡滑行面板版本（預設 v0.5.0） / specify Sweep Pad release tag (default: v0.5.0) |
 | `-Uninstall` | 移除倉頡滑行面板與捷徑 / remove Sweep Pad and shortcut |
 | `-NoModel` / `-DryRun` / `-NoDeploy` | 不下載語言模型／只顯示不做／只複製檔案不部署 / do not download the language model / only show, change nothing / copy files only, do not deploy |
 
@@ -142,6 +142,7 @@ The Windows installer installs the "Cangjie Sweep Pad" (`cangjie_sweep_pad.py` f
 
 ## Changelog / 更新紀錄
 
+- **v0.6.4** — Sweep Pad v0.5.0: optional `--mode commit` types the clicked candidate (Linux/macOS), default unchanged. / 滑行輸入板 v0.5.0：可選的 `--mode commit` 會直接輸入點選的候選字（Linux/macOS），預設行為不變。
 - **v0.6.3** — Sweep Pad v0.4.1: candidate row no longer resizes, the sweep trail stays visible. / 滑行輸入板 v0.4.1：候選列不再變高，滑行軌跡不會消失。
 - **v0.6.2** — Sweep Pad v0.4.0: single-character backtrack slips decode correctly (decode_auto), word floor 1000. / 滑行輸入板 v0.4.0：單字回頭滑行也能正確解碼（decode_auto），詞頻下限 1000。
 - **v0.6.1** — Sweep Pad v0.3.0: tolerance for backtracks. / 滑行輸入板 v0.3.0：容許回頭滑行。

@@ -15,7 +15,7 @@
             -WithV2             also install the experimental cangjie5_fluency_v2 schema (implies -Cangjie5)
             -Cangjie3           accepted for compatibility; the 3rd generation is now installed by default
             -NoSweep            do NOT install the Sweep Pad (cangjie-sweep)
-            -PadRef <tag>       which version of Sweep Pad to install (default: v0.4.1)
+            -PadRef <tag>       which version of Sweep Pad to install (default: v0.5.0)
             -Uninstall          remove Sweep Pad files and Start Menu shortcut
 
   DEFAULT = 3rd-generation Cangjie (cangjie3_fluency, the table behind Windows XP's new Cangjie). Its table
@@ -41,7 +41,7 @@ param(
   [switch]$FuzzyDefault,
   [ValidateSet('narrow', 'normal', 'wide')][string]$FuzzyRange = 'normal',
   [switch]$NoSweep,
-  [string]$PadRef = 'v0.4.1',
+  [string]$PadRef = 'v0.5.0',
   [switch]$Uninstall,
   [switch]$Offline,
   [switch]$DryRun,
@@ -74,7 +74,7 @@ $GramSize    = 41415724
 $Cin3Url     = "$RepoRaw/tables/mscj3.cin"
 $Cin3Sha256  = 'a7b3d03898dc0b2b0bd7803ad0be7b940a1ed945ac5d6314ed832b1dbf6839a2'
 $PadRepo     = 'githubhjs/cangjie-fuzzy-core'
-if (-not $PadRef) { $PadRef = 'v0.4.1' }
+if (-not $PadRef) { $PadRef = 'v0.5.0' }
 $PadZipName  = "cangjie-sweep-pad-$PadRef.zip"
 $PadUrl      = "https://github.com/$PadRepo/releases/download/$PadRef/$PadZipName"
 $PadShaUrl   = "$PadUrl.sha256"

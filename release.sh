@@ -8,7 +8,7 @@ V="${1:?usage: ./release.sh vX.Y.Z [--publish]}"
 cd "$(dirname "$0")"
 mkdir -p dist
 
-PAD_REF="${PAD_REF:-v0.4.1}"
+PAD_REF="${PAD_REF:-v0.5.0}"
 PAD_BASE_URL="https://github.com/githubhjs/cangjie-fuzzy-core/releases/download/$PAD_REF"
 PAD_ZIP="cangjie-sweep-pad-$PAD_REF.zip"
 PAD_SHA="$PAD_ZIP.sha256"
